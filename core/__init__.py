@@ -2,7 +2,7 @@ from flask import Flask
 from config import Configuration
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from flask_jwt_extended import JWTManager
+from flask_jwt_extended import JWTManager, jwt_required
 from flask_marshmallow import Marshmallow
 
 app = Flask(__name__)
@@ -11,8 +11,16 @@ db = SQLAlchemy(app)
 jwt = JWTManager(app)
 ma = Marshmallow(app)
 
+from .models import User, user_schema, users_schema
+
 migrate = Migrate(app, db)
 
+from .auth import auth as auth_blueprint
+
+app.register_blueprint(auth_blueprint, url_prefix="/api/token/v1.0")
+
+
 @app.route("/")
+@jwt_required()
 def hello():
-    return {"msg": "hello word"}, 200
+    return {"msg": "hello world"}, 200
