@@ -8,6 +8,7 @@ from flask_jwt_extended import (
     set_access_cookies,
     set_refresh_cookies,
     unset_jwt_cookies,
+    verify_jwt_in_request
 )
 
 from .. import db
@@ -135,3 +136,11 @@ def user_admin():
     db.session.commit()
     return user_schema.jsonify(user), 200
 
+
+@auth.route("/logged_in", methods=['GET'])
+@jwt_required(optional=True)
+def loged_in():
+    if verify_jwt_in_request(optional=True):
+        return jsonify({"msg": True}), 200
+    else:
+        return jsonify({"msg": False}), 200
