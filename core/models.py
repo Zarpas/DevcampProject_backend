@@ -26,7 +26,7 @@ class User(db.Model):
 
     def verify_password(self, password):
         return myctx.verify(password, self.password_hash)
-
+    
     def __init__(self, id, name, surnames, email, password):
         self.id = id
         self.name = name

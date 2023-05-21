@@ -4,12 +4,17 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager, jwt_required
 from flask_marshmallow import Marshmallow
+from flask_cors import CORS
+import logging
 
 app = Flask(__name__)
 app.config.from_object(Configuration)
 db = SQLAlchemy(app)
 jwt = JWTManager(app)
 ma = Marshmallow(app)
+cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
+
+logging.getLogger('flask_cors').level = logging.DEBUG
 
 from .models import User, user_schema, users_schema
 

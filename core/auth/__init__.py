@@ -8,7 +8,8 @@ from flask_jwt_extended import (
     set_access_cookies,
     set_refresh_cookies,
     unset_jwt_cookies,
-    verify_jwt_in_request
+    verify_jwt_in_request,
+    get_csrf_token,
 )
 
 from .. import db
@@ -29,11 +30,10 @@ def register():
 
     if user is None:
         return jsonify({"msg": "Something went wrong with user register"}), 400
-    
+
     db.session.add(user)
     db.session.commit()
     return user_schema.jsonify(user), 201
-
 
 
 @auth.route("/auth", methods=["POST"])
@@ -51,12 +51,23 @@ def login():
     if not user.verify_password(password):
         return response, 401
 
-    access_token = create_access_token(identity=id)
-    refresh_token = create_refresh_token(identity=id)
+    new_token = create_access_token(identity=user.id, fresh=False)
+    new_refresh_token = create_refresh_token(identity=user.id)
 
-    response = jsonify({"login": True})
-    set_access_cookies(response, access_token)
-    set_refresh_cookies(response, refresh_token)
+    response = jsonify(
+        {
+            "login": True,
+            "status": "created",
+            "meta": {
+                "accessToken": new_token,
+                "access_csrf_token": get_csrf_token(new_token),
+                "refreshToken": new_refresh_token,
+                "refresh_csrf_token": get_csrf_token(new_refresh_token)
+            },
+        }
+    )
+    set_access_cookies(response, new_token)
+    set_refresh_cookies(response, new_refresh_token)
     return response, 200
 
 
@@ -71,8 +82,10 @@ def refresh():
     return response, 200
 
 
-@auth.route("/remove", methods=["POST"])
+@auth.route("/remove", methods=["DELETE"])
+@jwt_required(optional=True)
 def logout():
+    id = verify_jwt_in_request(optional=True)
     resp = jsonify({"logout": True})
     unset_jwt_cookies(resp)
     return resp, 200
@@ -83,7 +96,7 @@ def logout():
 def protected():
     id = get_jwt_identity()
     user = User.query.get(id)
-    return jsonify({"hello": "from {}".format(user.name + ' ' + user.surnames)}), 200
+    return jsonify({"hello": "from {}".format(user.name + " " + user.surnames)}), 200
 
 
 @auth.route("/new_password", methods=["POST"])
@@ -98,7 +111,7 @@ def new_password():
         db.session.add(user)
         db.session.commit()
         return user_schema.jsonify(user), 200
-    
+
     return jsonify({"msg": "password incorrect"}), 400
 
 
@@ -110,7 +123,7 @@ def user_admin():
 
     if admin.can_admin is False:
         return jsonify({"msg": "not necessary rights for this"}), 401
-    
+
     user_id = request.json.get("id")
     user = User.query.get(user_id)
     can_admin = request.json.get("can_admin", None)
@@ -137,10 +150,10 @@ def user_admin():
     return user_schema.jsonify(user), 200
 
 
-@auth.route("/logged_in", methods=['GET'])
+@auth.route("/logged_in", methods=["GET"])
 @jwt_required(optional=True)
-def loged_in():
+def logged_in():
     if verify_jwt_in_request(optional=True):
-        return jsonify({"msg": True}), 200
+        return jsonify({"logged_in": True}), 200
     else:
-        return jsonify({"msg": False}), 200
+        return jsonify({"logged_in": False}), 200
