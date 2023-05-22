@@ -1,4 +1,5 @@
 from flask import jsonify, request, Blueprint
+from datetime import datetime, timedelta, timezone
 
 from flask_jwt_extended import (
     jwt_required,
@@ -9,7 +10,8 @@ from flask_jwt_extended import (
     set_refresh_cookies,
     unset_jwt_cookies,
     verify_jwt_in_request,
-    get_csrf_token,
+    # get_csrf_token,
+    get_jwt
 )
 
 from .. import db
@@ -18,7 +20,7 @@ from ..models import User, user_schema
 auth = Blueprint("auth", __name__)
 
 
-@auth.route("/register", methods=["POST"])
+@auth.route("/user", methods=["POST"])
 def register():
     id = request.json.get("id")
     name = request.json.get("name")
@@ -36,86 +38,17 @@ def register():
     return user_schema.jsonify(user), 201
 
 
-@auth.route("/auth", methods=["POST"])
-def login():
-    id = request.json.get("id", None)
-    password = request.json.get("password", None)
-
-    user = User.query.get(id)
-
-    response = jsonify({"msg": "user not found or incorrect password!"})
-
-    if user is None:
-        return response, 401
-
-    if not user.verify_password(password):
-        return response, 401
-
-    new_token = create_access_token(identity=user.id, fresh=False)
-    new_refresh_token = create_refresh_token(identity=user.id)
-
-    response = jsonify(
-        {
-            "login": True,
-            "status": "created",
-            "meta": {
-                "accessToken": new_token,
-                "access_csrf_token": get_csrf_token(new_token),
-                "refreshToken": new_refresh_token,
-                "refresh_csrf_token": get_csrf_token(new_refresh_token)
-            },
-        }
-    )
-    set_access_cookies(response, new_token)
-    set_refresh_cookies(response, new_refresh_token)
-    return response, 200
-
-
-@auth.route("/refresh", methods=["POST"])
-@jwt_required(refresh=True)
-def refresh():
-    current_user = get_jwt_identity()
-    access_token = create_access_token(identity=current_user)
-
-    response = jsonify({"refresh": True})
-    set_access_cookies(response, access_token)
-    return response, 200
-
-
-@auth.route("/remove", methods=["DELETE"])
-@jwt_required(optional=True)
-def logout():
-    id = verify_jwt_in_request(optional=True)
-    resp = jsonify({"logout": True})
-    unset_jwt_cookies(resp)
-    return resp, 200
-
-
-@auth.route("/example", methods=["GET"])
+@auth.route("/user", methods=["GET"])
 @jwt_required()
-def protected():
+def register():
     id = get_jwt_identity()
+
     user = User.query.get(id)
-    return jsonify({"hello": "from {}".format(user.name + " " + user.surnames)}), 200
+
+    return user_schema.jsonify(user), 201
 
 
-@auth.route("/new_password", methods=["POST"])
-@jwt_required()
-def new_password():
-    id = get_jwt_identity()
-    user = User.query.get(id)
-    old_password = request.json.get("old_password")
-    new_password = request.json.get("new_password")
-    if user.verify_password(old_password):
-        user.password_hash = user.hash_password(new_password)
-        db.session.add(user)
-        db.session.commit()
-        return user_schema.jsonify(user), 200
-
-    return jsonify({"msg": "password incorrect"}), 400
-
-
-@auth.route("/user_admin", methods=["POST"])
+@auth.route("/user", methods=["PATCH"])
 @jwt_required()
 def user_admin():
     id = get_jwt_identity()
@@ -148,6 +81,89 @@ def user_admin():
     db.session.add(user)
     db.session.commit()
     return user_schema.jsonify(user), 200
+
+
+@auth.route("/token", methods=["POST"])
+def login():
+    id = request.json.get("id", None)
+    password = request.json.get("password", None)
+
+    user = User.query.get(id)
+
+    response = jsonify({"msg": "user not found or incorrect password!"})
+
+    if user is None:
+        return response, 401
+
+    if not user.verify_password(password):
+        return response, 401
+
+    new_token = create_access_token(identity=user.id, fresh=False)
+    new_refresh_token = create_refresh_token(identity=user.id)
+
+    response = jsonify(
+        {
+            "login": True,
+            "status": "created",
+            "meta": {
+                "accessToken": new_token,
+                # "access_csrf_token": get_csrf_token(new_token),
+                "refreshToken": new_refresh_token,
+                # "refresh_csrf_token": get_csrf_token(new_refresh_token)
+            },
+        }
+    )
+    set_access_cookies(response, new_token)
+    set_refresh_cookies(response, new_refresh_token)
+    return response, 200
+
+
+@auth.after_request
+def refresh(response):
+    try:
+        exp_timestamp = get_jwt()["exp"]
+        now = datetime.now(timezone.utc)
+        target_timestamp = datetime.timestamp(now + timedelta(minutes=30))
+        if target_timestamp > exp_timestamp:
+            access_token = create_access_token(identity=get_jwt_identity())
+            set_access_cookies(response, access_token)
+        return response
+    except (RuntimeError, KeyError):
+        return response
+
+
+@auth.route("/logout", methods=["DELETE"])
+@jwt_required(optional=True)
+def logout():
+    id = verify_jwt_in_request(optional=True)
+    resp = jsonify({"logout": True})
+    unset_jwt_cookies(resp)
+    return resp, 200
+
+
+@auth.route("/example", methods=["GET"])
+@jwt_required()
+def protected():
+    id = get_jwt_identity()
+    user = User.query.get(id)
+    return jsonify({"hello": "from {}".format(user.name + " " + user.surnames)}), 200
+
+
+@auth.route("/new_password", methods=["PATCH"])
+@jwt_required()
+def new_password():
+    id = get_jwt_identity()
+    print(id)
+    user = User.query.get(id)
+    old_password = request.json.get("old_password")
+    new_password = request.json.get("new_password")
+    if user.verify_password(old_password):
+        user.password_hash = user.hash_password(new_password)
+        db.session.add(user)
+        db.session.commit()
+        return user_schema.jsonify(user), 200
+
+    return jsonify({"msg": "password incorrect"}), 400
 
 
 @auth.route("/logged_in", methods=["GET"])
