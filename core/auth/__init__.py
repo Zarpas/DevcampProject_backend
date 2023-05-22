@@ -141,14 +141,6 @@ def logout():
     return resp, 200
 
 
-@auth.route("/example", methods=["GET"])
-@jwt_required()
-def protected():
-    id = get_jwt_identity()
-    user = User.query.get(id)
-    return jsonify({"hello": "from {}".format(user.name + " " + user.surnames)}), 200
-
-
 @auth.route("/new_password", methods=["PATCH"])
 @jwt_required()
 def new_password():
