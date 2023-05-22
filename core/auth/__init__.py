@@ -40,7 +40,7 @@ def register():
 
 @auth.route("/user", methods=["GET"])
 @jwt_required()
-def register():
+def get_user():
     id = get_jwt_identity()
 
     user = User.query.get(id)
