@@ -15,7 +15,7 @@ from flask_jwt_extended import (
 )
 
 from .. import db
-from ..models import User, user_schema
+from ..models import User, user_schema, users_schema
 
 auth = Blueprint("auth", __name__)
 
@@ -45,7 +45,13 @@ def get_user():
 
     user = User.query.get(id)
 
-    return user_schema.jsonify(user), 201
+    if user.can_admin:
+        if request.is_json:
+            id = request.json.get("id", None)
+            if id is not None:
+                user = User.query.get(id)
+
+    return user_schema.jsonify(user), 200
 
 
 @auth.route("/user", methods=["PATCH"])
@@ -81,6 +87,22 @@ def user_admin():
     db.session.add(user)
     db.session.commit()
     return user_schema.jsonify(user), 200
+
+
+@auth.route("/get_users", methods=["GET"])
+@jwt_required()
+def get_user_list():
+    # admin_id = get_jwt_identity()
+    # admin = User.query.get(admin_id)
+    # page = request.json.get("page", 1) -1
+    # per_page = request.json.get("per_page", 1) 
+
+    # if admin.can_admin is False:
+    #     return jsonify({"msg": "not necessary rights for this"}), 401
+    
+    # users = User.query.with_entities(User.id, User.name, User.surnames).all() # [page*per_page:(page*per_page)+per_page]
+    # return users_schema.jsonify(users)
+    return jsonify({"hello": "world"})
 
 
 @auth.route("/token", methods=["POST"])

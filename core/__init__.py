@@ -22,4 +22,4 @@ migrate = Migrate(app, db)
 
 from .auth import auth as auth_blueprint
 
-app.register_blueprint(auth_blueprint, url_prefix="/api/token/v1.0")
+app.register_blueprint(auth_blueprint, url_prefix="/api/user/v1.0")
