@@ -24,7 +24,7 @@ class User(db.Model):
     def hash_password(self, password):
         return myctx.hash(password)
 
-    def verify_password(self, password):
+    def check_password(self, password):
         return myctx.verify(password, self.password_hash)
     
     def __init__(self, id, name, surnames, email, password):
