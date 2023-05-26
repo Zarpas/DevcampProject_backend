@@ -17,10 +17,7 @@ from flask_jwt_extended import create_access_token
 from flask_jwt_extended import create_refresh_token
 from flask_jwt_extended import get_jwt_identity
 from flask_jwt_extended import set_access_cookies
-from flask_jwt_extended import set_refresh_cookies
-from flask_jwt_extended import unset_jwt_cookies
 from flask_jwt_extended import verify_jwt_in_request
-    # get_csrf_token,
 from flask_jwt_extended import get_jwt
 
 from .. import db, jwt
@@ -45,6 +42,7 @@ def admin_required():
         return decorator
 
     return wrapper
+
 
 @auth.route("/user", methods=["POST"])
 def register():
@@ -150,11 +148,6 @@ def logged_in():
         return jsonify({"logged_in": False}), 200
 
 
-##################################################################################
-# new code addition
-##################################################################################
-
-
 @jwt.user_lookup_loader
 def user_lookup_callback(_jwt_header, jwt_data):
     identity = jwt_data["sub"]
@@ -198,15 +191,12 @@ def refresh_expiring_jwts(response):
         target_timestamp = datetime.timestamp(now + timedelta(minutes=30))
         if target_timestamp > exp_timestamp:
             access_token = create_access_token(identity=get_jwt_identity())
-            set_access_cookies(response, access_token)  # remake to use tokens only
+            set_access_cookies(response, access_token)
         return response
     except (RuntimeError, KeyError):
-        # Case where there is not a valid JWT. Just return the original response
         return response
 
 
-# We are using the `refresh=True` options in jwt_required to only allow
-# refresh tokens to access this route.
 @auth.route("/refresh", methods=["POST"])
 @jwt_required(refresh=True)
 def refresh():
@@ -225,7 +215,6 @@ def login():
     if not user or not user.check_password(password):
         return jsonify("Wrong username or password"), 401
 
-    # Notice that we are passing in the actual sqlalchemy user object here
     access_token = create_access_token(identity=user.id)
     refresh_token = create_refresh_token(identity=user.id)
     return jsonify(access_token=access_token, refresh_token=refresh_token)
@@ -243,12 +232,9 @@ def logout():
     return jsonify(msg=f"{ttype.capitalize()} token successfully revoked")
 
 
-# Protect a route with jwt_required, which will kick out requests
-# without a valid JWT present.
 @auth.route("/protected", methods=["GET"])
 @jwt_required()
 def protected():
-    # Access the identity of the current user with get_jwt_identity
     current_user = get_jwt_identity()
     return jsonify(logged_in_as=current_user), 200
 
@@ -256,7 +242,6 @@ def protected():
 @auth.route("/who_am_i", methods=["GET"])
 @jwt_required()
 def protected_who_am_i():
-    # We can now access our sqlalchemy User object via `current_user`.
     return jsonify(
         id=current_user.id,
         name=current_user.name,
@@ -264,8 +249,6 @@ def protected_who_am_i():
     )
 
 
-# In a protected view, get the claims you added to the jwt with the
-# get_jwt() method
 @auth.route("/protected_claims", methods=["GET"])
 @jwt_required()
 def protected_claims():
