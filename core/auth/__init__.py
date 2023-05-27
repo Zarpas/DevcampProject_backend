@@ -1,5 +1,7 @@
 from functools import wraps
 
+import json
+
 from flask import jsonify
 from flask import request
 from flask import Blueprint
@@ -19,6 +21,8 @@ from flask_jwt_extended import get_jwt_identity
 from flask_jwt_extended import set_access_cookies
 from flask_jwt_extended import verify_jwt_in_request
 from flask_jwt_extended import get_jwt
+
+from pprint import pprint
 
 from .. import db, jwt
 from ..models import User, user_schema, users_schema
@@ -63,17 +67,10 @@ def register():
 
 
 @auth.route("/user", methods=["GET"])
-@jwt_required()
+@admin_required()
 def get_user():
-    id = get_jwt_identity()
-
+    id = request.args.get("id", None)
     user = User.query.get(id)
-
-    if user.can_admin:
-        if request.is_json:
-            id = request.json.get("id", None)
-            if id is not None:
-                user = User.query.get(id)
 
     return user_schema.jsonify(user), 200
 
@@ -107,16 +104,11 @@ def user_admin():
     return user_schema.jsonify(user), 200
 
 
-@auth.route("/get_users", methods=["GET"])
-@jwt_required()
+@auth.route("/users", methods=["GET"])
+@admin_required()
 def get_user_list():
-    admin_id = get_jwt_identity()
-    admin = User.query.get(admin_id)
-    page = request.json.get("page", 1) -1
-    per_page = request.json.get("per_page", 1) 
-
-    if admin.can_admin is False:
-        return jsonify({"msg": "not necessary rights for this"}), 401
+    page = int(request.args.get("page", 0))
+    per_page = 10
     
     users = User.query.with_entities(User.id, User.name, User.surnames).all()[page*per_page:(page*per_page)+per_page]
     return users_schema.jsonify(users)
@@ -126,15 +118,16 @@ def get_user_list():
 @jwt_required()
 def new_password():
     id = get_jwt_identity()
-    print(id)
     user = User.query.get(id)
     old_password = request.json.get("old_password")
     new_password = request.json.get("new_password")
-    if user.verify_password(old_password):
+    if user.check_password(old_password):
         user.password_hash = user.hash_password(new_password)
         db.session.add(user)
         db.session.commit()
-        return user_schema.jsonify(user), 200
+        response = user_schema.dump(user)
+        response["status"]= "created"
+        return jsonify(response), 200
 
     return jsonify({"msg": "password incorrect"}), 400
 
@@ -217,7 +210,7 @@ def login():
 
     access_token = create_access_token(identity=user.id)
     refresh_token = create_refresh_token(identity=user.id)
-    return jsonify(access_token=access_token, refresh_token=refresh_token)
+    return jsonify(access_token=access_token, refresh_token=refresh_token, status="created")
 
 
 @auth.route("/logout", methods=["DELETE"])
