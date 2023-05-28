@@ -80,6 +80,9 @@ def get_user():
 def user_admin():
     user_id = request.json.get("id")
     user = User.query.get(user_id)
+    active = request.json.get("active", None)
+    if active is not None:
+        user.active = active
     can_admin = request.json.get("can_admin", None)
     if can_admin is not None:
         user.can_admin = can_admin
@@ -95,9 +98,6 @@ def user_admin():
     can_takepicture = request.json.get("can_takepicture", None)
     if can_takepicture is not None:
         user.can_takepicture = can_takepicture
-    active = request.json.get("active", None)
-    if active is not None:
-        user.active = active
 
     db.session.add(user)
     db.session.commit()
@@ -109,8 +109,10 @@ def user_admin():
 def get_user_list():
     page = int(request.args.get("page", 0))
     per_page = 10
-    
-    users = User.query.with_entities(User.id, User.name, User.surnames).all()[page*per_page:(page*per_page)+per_page]
+
+    users = User.query.with_entities(User.id, User.name, User.surnames).all()[
+        page * per_page : (page * per_page) + per_page
+    ]
     return users_schema.jsonify(users)
 
 
@@ -126,7 +128,7 @@ def new_password():
         db.session.add(user)
         db.session.commit()
         response = user_schema.dump(user)
-        response["status"]= "created"
+        response["status"] = "created"
         return jsonify(response), 200
 
     return jsonify({"msg": "password incorrect"}), 400
@@ -136,7 +138,22 @@ def new_password():
 @jwt_required(optional=True)
 def logged_in():
     if verify_jwt_in_request(optional=True):
-        return jsonify({"logged_in": True}), 200
+        id = get_jwt_identity()
+        user = User.query.get(id)
+        return (
+            jsonify(
+                {
+                    "logged_in": True,
+                    "can_admin": user.can_admin,
+                    "can_fileupload": user.can_fileupload,
+                    "can_listoperate": user.can_listoperate,
+                    "can_writenote": user.can_writenote,
+                    "can_takepicture": user.can_takepicture,
+                    "name": user.name
+                }
+            ),
+            200,
+        )
     else:
         return jsonify({"logged_in": False}), 200
 
@@ -172,7 +189,7 @@ def add_claims_to_access_token(identity):
         "can_fileupload": user.can_fileupload,
         "can_listoperate": user.can_listoperate,
         "can_writenote": user.can_writenote,
-        "can_takepicture": user.can_takepicture
+        "can_takepicture": user.can_takepicture,
     }
 
 
@@ -210,7 +227,9 @@ def login():
 
     access_token = create_access_token(identity=user.id)
     refresh_token = create_refresh_token(identity=user.id)
-    return jsonify(access_token=access_token, refresh_token=refresh_token, status="created")
+    return jsonify(
+        access_token=access_token, refresh_token=refresh_token, status="created"
+    )
 
 
 @auth.route("/logout", methods=["DELETE"])
@@ -223,6 +242,11 @@ def logout():
 
     # Returns "Access token revoked" or "Refresh token revoked"
     return jsonify(msg=f"{ttype.capitalize()} token successfully revoked")
+
+
+######################################################
+# for test purposes only                             #
+######################################################
 
 
 @auth.route("/protected", methods=["GET"])
