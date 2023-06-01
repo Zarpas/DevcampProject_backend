@@ -108,12 +108,32 @@ def user_admin():
 @admin_required()
 def get_user_list():
     page = int(request.args.get("page", 0))
-    per_page = 10
+    per_page = int(request.args.get("per_page", 10))
 
     users = User.query.with_entities(User.id, User.name, User.surnames).all()[
         page * per_page : (page * per_page) + per_page
     ]
     return users_schema.jsonify(users)
+
+@auth.route("/search_user", methods=["GET"])
+@admin_required()
+def search_user():
+    user_id = request.args.get("id", None)
+    name = request.args.get("name", None)
+    surnames = request.args.get("surnames", None)
+
+
+    if user_id is not None:
+        user = User.query.filter(User.id.like("%"+user_id+"%")).all()
+        return users_schema.jsonify(user)
+    elif name is not None:
+        users = User.query.filter(User.name.like("%"+name+"%")).all()
+        return users_schema.jsonify(users)
+    elif surnames is not None:
+        users = User.query.filter(User.surnames.like("%"+surnames+"%")).all()
+        return users_schema.jsonify(users)
+    else:
+        return jsonify({"msg": "no data sent"})
 
 
 @auth.route("/new_password", methods=["PATCH"])
