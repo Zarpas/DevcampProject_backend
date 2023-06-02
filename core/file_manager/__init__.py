@@ -14,15 +14,15 @@ from .. import db
 from .. import User
 
 
-UPLOAD_DIRECTORY = app.config['UPLOAD_FOLDER']
-ALLOWED_EXTENSIONS = app.config['ALLOWED_EXTENSIONS']
+UPLOAD_DIRECTORY = app.config["UPLOAD_FOLDER"]
+ALLOWED_EXTENSIONS = app.config["ALLOWED_EXTENSIONS"]
 
 
 if not os.path.exists(UPLOAD_DIRECTORY):
     os.makedirs(UPLOAD_DIRECTORY)
 
 
-file_mngr = Blueprint('file_manager', __name__)
+file_mngr = Blueprint("file_manager", __name__)
 
 
 def file_upload_required():
@@ -34,30 +34,35 @@ def file_upload_required():
             if claims["can_fileupload"]:
                 return fn(*args, **kwargs)
             else:
-                return jsonify(msg="File Uploades only!"), 403
-            
+                return jsonify(msg="File Uploaders only!"), 403
+
         return decorator
+
     return wrapper
 
 
 def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 # uploads a file from de the frontend (form-data, no json in the body)
 @file_mngr.route("/file", methods=["POST"])
 @file_upload_required()
 def post_file():
-    if 'filename' not in request.files:
+    if "filename" not in request.files:
         return {"msg": "No file part"}, 400
-    filename = request.files['filename']
+    filename = request.files["filename"]
     id = get_jwt_identity()
-    if filename.filename == '':
+    if filename.filename == "":
         return {"msg": "No selected file"}, 412
-    
+
     if filename and allowed_file(filename.filename):
-        filename.save(os.path.join(UPLOAD_DIRECTORY, secure_filename(filename.filename)))
-        file = File(os.path.join(UPLOAD_DIRECTORY, secure_filename(filename.filename)), id)
+        filename.save(
+            os.path.join(UPLOAD_DIRECTORY, secure_filename(filename.filename))
+        )
+        file = File(
+            os.path.join(UPLOAD_DIRECTORY, secure_filename(filename.filename)), id
+        )
         db.session.add(file)
         db.session.commit()
     else:
@@ -74,7 +79,7 @@ def list_files():
     return files_schema.jsonify(files)
 
 
-@file_mngr.route('/file', methods=["GET"])
+@file_mngr.route("/file", methods=["GET"])
 @file_upload_required()
 def get_file():
     id = request.json.get("id")
@@ -84,9 +89,10 @@ def get_file():
     return file_schema.jsonify(file)
 
 
-@file_mngr.route('/file', methods=["DELETE"])
+@file_mngr.route("/file", methods=["DELETE"])
+@file_upload_required()
 def delete_file():
-    id = request.json.get('id')
+    id = request.json.get("id")
     file = File.query.get(id)
     if file is None:
         return {"msg": "file not found"}, 400
