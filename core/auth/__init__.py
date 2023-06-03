@@ -243,7 +243,7 @@ def login():
 
     user = User.query.filter_by(id=id).one_or_none()
     if not user or not user.check_password(password):
-        return jsonify("Wrong username or password"), 401
+        return jsonify(msg="Wrong username or password"), 401
 
     access_token = create_access_token(identity=user.id)
     refresh_token = create_refresh_token(identity=user.id)

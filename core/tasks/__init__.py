@@ -37,6 +37,6 @@ def new_task():
     if user.get_task_in_progress("example"):
         return jsonify({"msg": "A task is currently in progress"})
     else:
-        user.lauch_task("example", "task example")
+        user.launch_task("example", "", 100)
         db.session.commit()
     return jsonify({"msg": "task launched"})

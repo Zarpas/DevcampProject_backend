@@ -46,15 +46,15 @@ class User(db.Model):
         rq_job = current_app.task_queue.enqueue(
             "core.tasks.tasks." + name, self.id, *args, **kwargs
         )
-        task = Task(id=rq_job.get_id(), name=name, description=description, user=self)
+        task = Task(id=rq_job.get_id(), name=name, description=description, user_id=self.id)
         db.session.add(task)
         return task
 
     def get_tasks_in_progress(self):
         return Task.query.filter_by(user=self, complete=False).all()
 
-    def get_tasks_in_progress(self, name):
-        return Task.query.filter_by(name=name, user=self, complete=False).first()
+    def get_task_in_progress(self, name):
+        return Task.query.filter_by(name=name, user_id=self.id, complete=False).first()
 
 
 class UserSchema(ma.Schema):
@@ -115,7 +115,7 @@ class Task(db.Model):
     id = db.Column(db.String(36), primary_key=True)
     name = db.Column(db.String(128), index=True)
     description = db.Column(db.String(128))
-    user_id = db.Column(db.String(50), db.ForeignKey("users.id"))
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
     complete = db.Column(db.Boolean, default=False)
 
     def get_rq_job(self):
