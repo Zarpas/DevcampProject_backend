@@ -3,4 +3,6 @@ database.db
 *.pyc
 migrations
 .vscode
-logs
+logs/*
+
+logs/server.log

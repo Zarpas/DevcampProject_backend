@@ -106,22 +106,23 @@ def get_user_list():
 @bp.route("/search_user", methods=["GET"])
 @admin_required()
 def search_user():
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get("per_page", 10, type=int)
     user_id = request.args.get("id", None)
-    name = request.args.get("name", None)
+    name = request.args.get("username", None)
     surnames = request.args.get("surnames", None)
 
 
     if user_id is not None:
-        user = User.query.filter(User.id.like("%"+user_id+"%")).all()
-        return jsonify(user)
+        users = User.query.filter(User.id.like("%"+user_id+"%"))
     elif name is not None:
-        users = User.query.filter(User.name.like("%"+name+"%")).all()
-        return jsonify(users)
+        users = User.query.filter(User.username.like("%"+name+"%"))
     elif surnames is not None:
-        users = User.query.filter(User.surnames.like("%"+surnames+"%")).all()
-        return jsonify(users)
+        users = User.query.filter(User.surnames.like("%"+surnames+"%"))
     else:
         return jsonify({"msg": "no data sent"})
+    data = User.to_collection_dict(users, page, per_page, 'auth.search_user')
+    return jsonify(data)
 
 
 @bp.route("/new_password", methods=["PATCH"])
