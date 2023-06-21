@@ -1,4 +1,4 @@
-from .. import File, file_schema, files_schema
+from core.models import User, File
 from flask import Blueprint, jsonify, request, abort
 import os
 from werkzeug.utils import secure_filename
@@ -8,18 +8,16 @@ from functools import wraps
 from flask_jwt_extended import verify_jwt_in_request
 from flask_jwt_extended import get_jwt
 
-from .. import app
-from .. import db
-
-from .. import User
+from core import db
 
 
-UPLOAD_DIRECTORY = app.config["UPLOAD_FOLDER"]
-ALLOWED_EXTENSIONS = app.config["ALLOWED_EXTENSIONS"]
+
+# UPLOAD_DIRECTORY = app.config["UPLOAD_FOLDER"]
+# ALLOWED_EXTENSIONS = app.config["ALLOWED_EXTENSIONS"]
 
 
-if not os.path.exists(UPLOAD_DIRECTORY):
-    os.makedirs(UPLOAD_DIRECTORY)
+# if not os.path.exists(UPLOAD_DIRECTORY):
+#     os.makedirs(UPLOAD_DIRECTORY)
 
 
 file_mngr = Blueprint("file_manager", __name__)
@@ -49,59 +47,63 @@ def allowed_file(filename):
 @file_mngr.route("/file", methods=["POST"])
 @file_upload_required()
 def post_file():
-    if "filename" not in request.files:
-        return {"msg": "No file part"}, 400
-    filename = request.files["filename"]
-    id = get_jwt_identity()
-    if filename.filename == "":
-        return {"msg": "No selected file"}, 412
+    # if "filename" not in request.files:
+    #     return {"msg": "No file part"}, 400
+    # filename = request.files["filename"]
+    # id = get_jwt_identity()
+    # if filename.filename == "":
+    #     return {"msg": "No selected file"}, 412
 
-    if filename and allowed_file(filename.filename):
-        filename.save(
-            os.path.join(UPLOAD_DIRECTORY, secure_filename(filename.filename))
-        )
-        file = File(
-            os.path.join(UPLOAD_DIRECTORY, secure_filename(filename.filename)), id
-        )
-        db.session.add(file)
-        db.session.commit()
-    else:
-        return {"msg": "Not allowed filetype"}, 415
+    # if filename and allowed_file(filename.filename):
+    #     filename.save(
+    #         os.path.join(UPLOAD_DIRECTORY, secure_filename(filename.filename))
+    #     )
+    #     file = File(
+    #         os.path.join(UPLOAD_DIRECTORY, secure_filename(filename.filename)), id
+    #     )
+    #     db.session.add(file)
+    #     db.session.commit()
+    # else:
+    #     return {"msg": "Not allowed filetype"}, 415
 
-    return file_schema.jsonify(file)
+    # return file_schema.jsonify(file)
+    pass
 
 
 @file_mngr.route("/files", methods=["GET"])
 @file_upload_required()
 def list_files():
-    files = File.query.all()
-    print(files)
-    return files_schema.jsonify(files)
+    # files = File.query.all()
+    # print(files)
+    # return files_schema.jsonify(files)
+    pass
 
 
 @file_mngr.route("/file", methods=["GET"])
 @file_upload_required()
 def get_file():
-    id = request.json.get("id")
-    file = File.query.get(id)
-    if file is None:
-        return {"msg": "file not found"}, 400
-    return file_schema.jsonify(file)
+    # id = request.json.get("id")
+    # file = File.query.get(id)
+    # if file is None:
+    #     return {"msg": "file not found"}, 400
+    # return file_schema.jsonify(file)
+    pass
 
 
 @file_mngr.route("/file", methods=["DELETE"])
 @file_upload_required()
 def delete_file():
-    id = request.json.get("id")
-    file = File.query.get(id)
-    if file is None:
-        return {"msg": "file not found"}, 400
-    try:
-        os.remove(file.filename)
-        response = {}
-    except FileNotFoundError:
-        response["error"] = "file not found"
-    db.session.delete(file)
-    db.session.commit()
-    response["msg"] = "file deleted"
-    return response
+    # id = request.json.get("id")
+    # file = File.query.get(id)
+    # if file is None:
+    #     return {"msg": "file not found"}, 400
+    # try:
+    #     os.remove(file.filename)
+    #     response = {}
+    # except FileNotFoundError:
+    #     response["error"] = "file not found"
+    # db.session.delete(file)
+    # db.session.commit()
+    # response["msg"] = "file deleted"
+    # return response
+    pass

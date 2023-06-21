@@ -22,6 +22,7 @@ def _set_task_progress(progress):
 def example(user, seconds):
     _set_task_progress(0)
     job = get_current_job()
+    seconds = int(seconds)
     print("Starting task")
     for i in range(seconds):
         print(i)

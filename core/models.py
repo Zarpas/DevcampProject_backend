@@ -2,29 +2,56 @@ from passlib.context import CryptContext
 from datetime import datetime
 import redis
 import rq
-from flask import current_app
+from flask import current_app, url_for
+import json
+from time import time
 
-from core import db, ma
+from core import db
 
 myctx = CryptContext(["sha256_crypt"])
 
 
-class User(db.Model):
-    __tablename__ = "users"
+class PaginatedAPIMixin(object):
+    @staticmethod
+    def to_collection_dict(query, page, per_page, endpoint, **kwargs):
+        resources = query.paginate(page=page, per_page=per_page, error_out=False)
+        data = {
+            'items': [item.to_dict() for item in resources.items],
+            '_meta': {
+                'page': page,
+                'per_page': per_page,
+                'total_items': resources.total
+            },
+            '_links': {
+                'self': url_for(endpoint, page=page, per_page=per_page, **kwargs),
+                'next': url_for(endpoint, page=page +1, per_page=per_page, **kwargs) if resources.has_next else None,
+                'prev': url_for(endpoint, page=page - 1, per_page=per_page, **kwargs) if resources.has_prev else None
+            }
+        }
+        return data
+
+
+class User(PaginatedAPIMixin, db.Model):
+    __tablename__ = "user"
     id = db.Column(db.Integer(), primary_key=True)
-    name = db.Column(db.String(20), nullable=False)
+    username = db.Column(db.String(20), nullable=False)
     surnames = db.Column(db.String(40))
     password_hash = db.Column(db.String(128), nullable=False)
     email = db.Column(db.String(80))
     registered = db.Column(db.DateTime, default=datetime.now())
-    can_admin = db.Column(db.Boolean(), default=False)
-    can_fileupload = db.Column(db.Boolean(), default=False)
-    can_listoperate = db.Column(db.Boolean(), default=False)
-    can_writenote = db.Column(db.Boolean(), default=True)
-    can_takepicture = db.Column(db.Boolean(), default=False)
+    admin = db.Column(db.Boolean(), default=False)
+    fileupload = db.Column(db.Boolean(), default=False)
+    listoperate = db.Column(db.Boolean(), default=False)
+    writenote = db.Column(db.Boolean(), default=True)
+    takepicture = db.Column(db.Boolean(), default=False)
     active = db.Column(db.Boolean(), default=True)
-    file = db.relationship("File", backref="users", lazy="dynamic")
-    task = db.relationship("Task", backref="users", lazy="dynamic")
+    last_seen = db.Column(db.DateTime, default=datetime.utcnow)
+    messages_sent = db.relationship('Message', foreign_keys='Message.sender_id', backref='author', lazy='dynamic')
+    messages_received = db.relationship('Message', foreign_keys='Message.recipient_id', backref='recipient', lazy='dynamic')
+    last_message_read_time = db.Column(db.DateTime)
+    file = db.relationship("File", backref="user", lazy="dynamic")
+    notifications = db.relationship('Notification', backref='user', lazy='dynamic')
+    task = db.relationship("Task", backref="user", lazy="dynamic")
 
     def hash_password(self, password):
         return myctx.hash(password)
@@ -32,15 +59,15 @@ class User(db.Model):
     def check_password(self, password):
         return myctx.verify(password, self.password_hash)
 
-    def __init__(self, id, name, surnames, email, password):
+    def __init__(self, id, username, surnames, email, password):
         self.id = id
-        self.name = name
+        self.username = username
         self.surnames = surnames
         self.email = email
         self.password_hash = self.hash_password(password)
 
     def __repr__(self):
-        return "{} - {}, {}".format(self.id, self.surnames, self.name)
+        return "<User {}>".format(self.id)
 
     def launch_task(self, name, description, *args, **kwargs):
         rq_job = current_app.task_queue.enqueue(
@@ -55,35 +82,52 @@ class User(db.Model):
 
     def get_task_in_progress(self, name):
         return Task.query.filter_by(name=name, user_id=self.id, complete=False).first()
-
-
-class UserSchema(ma.Schema):
-    class Meta:
-        fields = (
-            "id",
-            "name",
-            "surnames",
-            "email",
-            "password_hash",
-            "registered",
-            "active",
-            "can_admin",
-            "can_fileupload",
-            "can_listoperate",
-            "can_writenote",
-            "can_takepicture",
-        )
-
-
-user_schema = UserSchema()
-users_schema = UserSchema(many=True)
-
+    
+    def new_messages(self):
+        last_read_time = self.last_message_read_time or datetime(1900, 1, 1)
+        return Message.query.filter_by(recipient=self).filter(
+            Message.timestamp > last_read_time).count()
+    
+    def add_notification(self, name, data):
+        self.notifications.filter_by(name=name).delete()
+        n = Notification(name=name, payload_json=json.dumps(data), user=self)
+        db.session.add(n)
+        return n
+    
+    def to_dict(self, include_email=False, include_roles=False, ):
+        data = {
+            'id': self.id,
+            'username': self.username,
+            'surnames': self.surnames,
+            'last_seen': self.last_seen.isoformat() + 'Z',
+            '_links': {
+                'self': url_for('auth.get_user', id=self.id)
+            }
+        }
+        if include_email:
+            data['email'] = self.email
+        if include_roles:
+            for field in ['active', 'admin', 'fileupload', 'listoperate', 'writenote', 'takepicture']:
+                data[field] = getattr(self, field)
+        return data
+    
+    def from_dict(self, data, new_user=False, change_admin=False):
+        for field in ['id', 'username', 'surnames', 'email']:
+            if field in data:
+                setattr(self, field, data[field])
+            if new_user and 'password' in data:
+                self.set_password(data['password'])
+            if change_admin:
+                for field in ['active', 'admin', 'fileupload', 'listoperate', 'writenote', 'takepicture']:
+                    if field in data:
+                        setattr(self, field, data[field])
+                
 
 class File(db.Model):
-    __tablename__ = "files"
+    __tablename__ = "file"
     id = db.Column(db.Integer, primary_key=True)
     filename = db.Column(db.String(255), nullable=False)
-    sender = db.Column(db.Integer, db.ForeignKey("users.id"))
+    sender_id = db.Column(db.Integer, db.ForeignKey("user.id"))
     sended = db.Column(db.DateTime, default=datetime.utcnow)
     processed = db.Column(db.Boolean, default=False)
 
@@ -95,27 +139,12 @@ class File(db.Model):
         return "{} - {}".format(self.filename, self.sender)
 
 
-class FileSchema(ma.Schema):
-    class Meta:
-        fields = (
-            "id",
-            "filename",
-            "sender",
-            "sended",
-            "processed",
-        )
-
-
-file_schema = FileSchema()
-files_schema = FileSchema(many=True)
-
-
 class Task(db.Model):
     __tablename__ = "tasks"
     id = db.Column(db.String(36), primary_key=True)
     name = db.Column(db.String(128), index=True)
     description = db.Column(db.String(128))
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
     complete = db.Column(db.Boolean, default=False)
 
     def get_rq_job(self):
@@ -130,22 +159,35 @@ class Task(db.Model):
         return job.meta.get("progress", 0) if job is not None else 100
 
 
-class TaskSchema(ma.Schema):
-    class Meta:
-        fields = (
-            "id",
-            "name",
-            "description",
-            "complete",
-        )
+class Message(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    recipient_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    body = db.Column(db.String(140))
+    timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
+    readed = db.Column(db.Boolean)
 
+    def __repr__(self):
+        return '<Message {}>'.format(self.body)
+    
 
-task_schema = TaskSchema()
-tasks_schema = TaskSchema(many=True)
+class Notification(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(128), index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    timestamp = db.Column(db.Float, index=True, default=time)
+    payload_json = db.Column(db.Text)
+    readed = db.Column(db.Boolean)
+
+    def get_data(self):
+        return json.loads(str(self.payload_json))
+    
+    def set_data(self, data):
+        return json.dumps(data)
 
 
 class List(db.Model):
-    __tablename__ = "lists"
+    __tablename__ = "list"
     id = db.Column(db.Integer, primary_key=True)
     list_code = db.Column(db.String(20), index=True, nullable=False)
     description = db.Column(db.String(70), nullable=False)
@@ -162,22 +204,6 @@ class List(db.Model):
 
     def __repr__(self):
         return "{} - {}".format(self.list_code, self.description)
-
-
-class ListSchema(ma.Schema):
-    class Meta:
-        fields = (
-            "id",
-            "list_code",
-            "description",
-            "edition",
-            "revision",
-            "project",
-        )
-
-
-list_schema = ListSchema()
-lists_schema = ListSchema(many=True)
 
 
 class WireList(db.Model):
@@ -228,57 +254,3 @@ class WireList(db.Model):
     etiqueta = db.Column(db.String(10))
     etiqueta_pant = db.Column(db.String(10))
 
-
-class WireListSchema(ma.Schema):
-    class Meta:
-        fields = (
-            'id',
-            'order',
-            'edicion',
-            'zona1',
-            'zona2',
-            'zona3',
-            'zona4',
-            'zona5',
-            'zona6',
-            'zona7',
-            'zona8',
-            'zona9',
-            'zona10',
-            'zona11',
-            'zona12',
-            'cable_num',
-            'codig_pant',
-            'senal_pant',
-            'sub_pant',
-            'clase',
-            'lugarpro',
-            'aparatopro',
-            'bornapro',
-            'esquemapro',
-            'lugardes',
-            'aparatodes',
-            'bornades',
-            'esquemades',
-            'seccion',
-            'longitud',
-            'codigocabl',
-            'terminalor',
-            'terminalde',
-            'observacion',
-            'num_mazo',
-            'codigo',
-            'potencial',
-            'peso',
-            'codrefcabl',
-            'codreftori',
-            'codreftdes',
-            'num_solucion',
-            'seguridad',
-            'etiqueta',
-            'etiqueta_pant',
-        )
-
-
-wirelist_schema = WireListSchema()
-wirelists_schema = WireListSchema(many=True)
