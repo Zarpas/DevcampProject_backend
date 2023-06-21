@@ -16,17 +16,21 @@ class PaginatedAPIMixin(object):
     def to_collection_dict(query, page, per_page, endpoint, **kwargs):
         resources = query.paginate(page=page, per_page=per_page, error_out=False)
         data = {
-            'items': [item.to_dict() for item in resources.items],
-            '_meta': {
-                'page': page,
-                'per_page': per_page,
-                'total_items': resources.total
+            "items": [item.to_dict() for item in resources.items],
+            "_meta": {
+                "page": page,
+                "per_page": per_page,
+                "total_items": resources.total,
             },
-            '_links': {
-                'self': url_for(endpoint, page=page, per_page=per_page, **kwargs),
-                'next': url_for(endpoint, page=page +1, per_page=per_page, **kwargs) if resources.has_next else None,
-                'prev': url_for(endpoint, page=page - 1, per_page=per_page, **kwargs) if resources.has_prev else None
-            }
+            "_links": {
+                "self": url_for(endpoint, page=page, per_page=per_page, **kwargs),
+                "next": url_for(endpoint, page=page + 1, per_page=per_page, **kwargs)
+                if resources.has_next
+                else None,
+                "prev": url_for(endpoint, page=page - 1, per_page=per_page, **kwargs)
+                if resources.has_prev
+                else None,
+            },
         }
         return data
 
@@ -46,11 +50,18 @@ class User(PaginatedAPIMixin, db.Model):
     takepicture = db.Column(db.Boolean(), default=False)
     active = db.Column(db.Boolean(), default=True)
     last_seen = db.Column(db.DateTime, default=datetime.utcnow)
-    messages_sent = db.relationship('Message', foreign_keys='Message.sender_id', backref='author', lazy='dynamic')
-    messages_received = db.relationship('Message', foreign_keys='Message.recipient_id', backref='recipient', lazy='dynamic')
+    messages_sent = db.relationship(
+        "Message", foreign_keys="Message.sender_id", backref="author", lazy="dynamic"
+    )
+    messages_received = db.relationship(
+        "Message",
+        foreign_keys="Message.recipient_id",
+        backref="recipient",
+        lazy="dynamic",
+    )
     last_message_read_time = db.Column(db.DateTime)
     file = db.relationship("File", backref="user", lazy="dynamic")
-    notifications = db.relationship('Notification', backref='user', lazy='dynamic')
+    notifications = db.relationship("Notification", backref="user", lazy="dynamic")
     task = db.relationship("Task", backref="user", lazy="dynamic")
 
     def hash_password(self, password):
@@ -73,7 +84,9 @@ class User(PaginatedAPIMixin, db.Model):
         rq_job = current_app.task_queue.enqueue(
             "core.tasks.tasks." + name, self.id, *args, **kwargs
         )
-        task = Task(id=rq_job.get_id(), name=name, description=description, user_id=self.id)
+        task = Task(
+            id=rq_job.get_id(), name=name, description=description, user_id=self.id
+        )
         db.session.add(task)
         return task
 
@@ -82,48 +95,67 @@ class User(PaginatedAPIMixin, db.Model):
 
     def get_task_in_progress(self, name):
         return Task.query.filter_by(name=name, user_id=self.id, complete=False).first()
-    
+
     def new_messages(self):
         last_read_time = self.last_message_read_time or datetime(1900, 1, 1)
-        return Message.query.filter_by(recipient=self).filter(
-            Message.timestamp > last_read_time).count()
-    
+        return (
+            Message.query.filter_by(recipient=self)
+            .filter(Message.timestamp > last_read_time)
+            .count()
+        )
+
     def add_notification(self, name, data):
         self.notifications.filter_by(name=name).delete()
         n = Notification(name=name, payload_json=json.dumps(data), user=self)
         db.session.add(n)
         return n
-    
-    def to_dict(self, include_email=False, include_roles=False, ):
+
+    def to_dict(
+        self,
+        include_email=False,
+        include_roles=False,
+    ):
         data = {
-            'id': self.id,
-            'username': self.username,
-            'surnames': self.surnames,
-            'last_seen': self.last_seen.isoformat() + 'Z',
-            '_links': {
-                'self': url_for('auth.get_user', id=self.id)
-            }
+            "id": self.id,
+            "username": self.username,
+            "surnames": self.surnames,
+            "last_seen": self.last_seen.isoformat() + "Z",
+            "_links": {"self": url_for("auth.get_user", id=self.id)},
         }
         if include_email:
-            data['email'] = self.email
+            data["email"] = self.email
         if include_roles:
-            for field in ['active', 'admin', 'fileupload', 'listoperate', 'writenote', 'takepicture']:
+            for field in [
+                "active",
+                "admin",
+                "fileupload",
+                "listoperate",
+                "writenote",
+                "takepicture",
+            ]:
                 data[field] = getattr(self, field)
         return data
-    
+
     def from_dict(self, data, new_user=False, change_admin=False):
         if new_user is False:
-            for field in ['id', 'username', 'surnames', 'email']:
+            for field in ["id", "username", "surnames", "email"]:
                 if field in data:
                     setattr(self, field, data[field])
-        if new_user and 'password' in data:
-            self.hash_password(data['password'])
+        if new_user and "password" in data:
+            self.hash_password(data["password"])
         if change_admin:
-            for field in ['active', 'admin', 'fileupload', 'listoperate', 'writenote', 'takepicture']:
+            for field in [
+                "active",
+                "admin",
+                "fileupload",
+                "listoperate",
+                "writenote",
+                "takepicture",
+            ]:
                 if field in data:
-                    print("{} {}".format(field,data[field]))
+                    print("{} {}".format(field, data[field]))
                     setattr(self, field, bool(data[field]))
-                
+
 
 class File(db.Model):
     __tablename__ = "file"
@@ -163,27 +195,27 @@ class Task(db.Model):
 
 class Message(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    recipient_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    sender_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    recipient_id = db.Column(db.Integer, db.ForeignKey("user.id"))
     body = db.Column(db.String(140))
     timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
     readed = db.Column(db.Boolean)
 
     def __repr__(self):
-        return '<Message {}>'.format(self.body)
-    
+        return "<Message {}>".format(self.body)
+
 
 class Notification(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), index=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
     timestamp = db.Column(db.Float, index=True, default=time)
     payload_json = db.Column(db.Text)
     readed = db.Column(db.Boolean)
 
     def get_data(self):
         return json.loads(str(self.payload_json))
-    
+
     def set_data(self, data):
         return json.dumps(data)
 
@@ -255,4 +287,3 @@ class WireList(db.Model):
     seguridad = db.Column(db.String(3))
     etiqueta = db.Column(db.String(10))
     etiqueta_pant = db.Column(db.String(10))
-

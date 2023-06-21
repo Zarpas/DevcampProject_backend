@@ -1,4 +1,8 @@
 from functools import wraps
+
+from flask import jsonify
+from flask import request
+
 from flask_jwt_extended import jwt_required
 from flask_jwt_extended import create_access_token
 from flask_jwt_extended import create_refresh_token
@@ -6,20 +10,18 @@ from flask_jwt_extended import get_jwt_identity
 from flask_jwt_extended import set_access_cookies
 from flask_jwt_extended import verify_jwt_in_request
 from flask_jwt_extended import get_jwt
-from flask import jsonify
-from flask import request
 from flask_jwt_extended import current_user
-import redis
 
-from core.auth import bp
-from core.auth.errors import bad_request
+import redis
 
 from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
 
 from core import db, jwt
+from core.auth import bp
 from core.models import User
+from core.auth.errors import bad_request
 from config import Configuration
 
 
@@ -45,13 +47,19 @@ def admin_required():
 @bp.route("/user", methods=["POST"])
 def register():
     data = request.get_json() or {}
-    if 'id' not in data or 'username' not in data or 'surnames' not in data or 'email' not in data or 'password' not in data:
-        return bad_request('Must include ID, username, surnames, email and password')
-    if User.query.filter_by(id=data['id']).first():
-        return bad_request('Please use a different ID')
-    if User.query.filter_by(email=data['email']).first():
-        return bad_request('Please use a different email address')
-    
+    if (
+        "id" not in data
+        or "username" not in data
+        or "surnames" not in data
+        or "email" not in data
+        or "password" not in data
+    ):
+        return bad_request("Must include ID, username, surnames, email and password")
+    if User.query.filter_by(id=data["id"]).first():
+        return bad_request("Please use a different ID")
+    if User.query.filter_by(email=data["email"]).first():
+        return bad_request("Please use a different email address")
+
     user = User()
     user.from_dict(data, new_user=True)
     db.session.add(user)
@@ -66,12 +74,12 @@ def register():
 @admin_required()
 def get_user():
     if request.is_json:
-        if 'id' in request.json:
+        if "id" in request.json:
             id = request.json.get("id", None)
-    elif 'id' in request.args:
+    elif "id" in request.args:
         id = request.args.get("id", None)
     else:
-        return bad_request('You need to identify the user.')
+        return bad_request("You need to identify the user.")
 
     return jsonify(User.query.get_or_404(id).to_dict())
 
@@ -80,13 +88,22 @@ def get_user():
 @admin_required()
 def user_admin():
     data = request.get_json() or {}
-    user = User.query.get_or_404(data['id'])
-    
-    if 'username' in data and data['username'] != user.username and 'surnames' in data and data['surnames'] != user.surnames:
-        return bad_request('You can not change your name')
-    if 'email' in data and data['email'] != user.email and User.query.filter_by(email=data['email']).first():
-        return bad_request('Please use a different email address.')
-    
+    user = User.query.get_or_404(data["id"])
+
+    if (
+        "username" in data
+        and data["username"] != user.username
+        and "surnames" in data
+        and data["surnames"] != user.surnames
+    ):
+        return bad_request("You can not change your name")
+    if (
+        "email" in data
+        and data["email"] != user.email
+        and User.query.filter_by(email=data["email"]).first()
+    ):
+        return bad_request("Please use a different email address.")
+
     user.from_dict(data, new_user=False, change_admin=True)
     db.session.commit()
     return jsonify(user.to_dict())
@@ -98,7 +115,7 @@ def get_user_list():
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 10, type=int)
 
-    data = User.to_collection_dict(User.query, page, per_page, 'auth.get_user_list')
+    data = User.to_collection_dict(User.query, page, per_page, "auth.get_user_list")
 
     return jsonify(data)
 
@@ -106,22 +123,21 @@ def get_user_list():
 @bp.route("/search_user", methods=["GET"])
 @admin_required()
 def search_user():
-    page = request.args.get('page', 1, type=int)
+    page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 10, type=int)
     user_id = request.args.get("id", None)
     name = request.args.get("username", None)
     surnames = request.args.get("surnames", None)
 
-
     if user_id is not None:
-        users = User.query.filter(User.id.like("%"+user_id+"%"))
+        users = User.query.filter(User.id.like("%" + user_id + "%"))
     elif name is not None:
-        users = User.query.filter(User.username.like("%"+name+"%"))
+        users = User.query.filter(User.username.like("%" + name + "%"))
     elif surnames is not None:
-        users = User.query.filter(User.surnames.like("%"+surnames+"%"))
+        users = User.query.filter(User.surnames.like("%" + surnames + "%"))
     else:
         return bad_request("no data sent")
-    data = User.to_collection_dict(users, page, per_page, 'auth.search_user')
+    data = User.to_collection_dict(users, page, per_page, "auth.search_user")
     return jsonify(data)
 
 
@@ -137,7 +153,7 @@ def new_password():
         db.session.commit()
         return jsonify(user.to_dict()), 200
 
-    return bad_request('Wrong password')
+    return bad_request("Wrong password")
 
 
 @bp.route("/logged_in", methods=["GET"])
@@ -147,7 +163,7 @@ def logged_in():
         id = get_jwt_identity()
         user = User.query.get(id)
         response = user.to_dict(include_roles=True)
-        response['logged_in'] = True
+        response["logged_in"] = True
         return jsonify(response)
     else:
         return jsonify({"logged_in": False}), 200
@@ -157,6 +173,7 @@ def logged_in():
 def user_lookup_callback(_jwt_header, jwt_data):
     identity = jwt_data["sub"]
     return User.query.filter_by(id=identity).one_or_none()
+
 
 @bp.after_request
 def refresh_expiring_jwts(response):
@@ -212,6 +229,7 @@ def logout():
 
     # Returns "Access token revoked" or "Refresh token revoked"
     return jsonify(message=f"{ttype.capitalize()} token successfully revoked")
+
 
 @jwt.expired_token_loader
 def my_expired_token_callback(jwt_header, jwt_payload):

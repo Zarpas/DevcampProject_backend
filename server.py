@@ -1,7 +1,8 @@
 from core import create_app, db
 from core.models import User, File, Task, Message, Notification, List, WireList
 
-app=create_app()
+app = create_app()
+
 
 @app.shell_context_processor
 def make_shell_context():

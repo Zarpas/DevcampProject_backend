@@ -33,9 +33,9 @@ def tasks_manager_required():
 def new_task():
     id = get_jwt_identity()
     user = User.query.get(id)
-    task = request.json.get('task', None)
-    description = request.json.get('description', "")
-    filename = request.json.get('filename', None)
+    task = request.json.get("task", None)
+    description = request.json.get("description", "")
+    filename = request.json.get("filename", None)
     if task is None:
         return jsonify({"message": "No task especified"})
     if filename is None:
@@ -46,4 +46,3 @@ def new_task():
         user.launch_task(task, description, filename)
         db.session.commit()
     return jsonify({"message": "task launched"})
-
