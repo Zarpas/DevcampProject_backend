@@ -54,17 +54,17 @@ class User(PaginatedAPIMixin, db.Model):
     task = db.relationship("Task", backref="user", lazy="dynamic")
 
     def hash_password(self, password):
-        return myctx.hash(password)
+        self.password_hash = myctx.hash(password)
 
     def check_password(self, password):
         return myctx.verify(password, self.password_hash)
 
-    def __init__(self, id, username, surnames, email, password):
-        self.id = id
-        self.username = username
-        self.surnames = surnames
-        self.email = email
-        self.password_hash = self.hash_password(password)
+    # def __init__(self, id, username, surnames, email, password):
+    #     self.id = id
+    #     self.username = username
+    #     self.surnames = surnames
+    #     self.email = email
+    #     self.password_hash = self.hash_password(password)
 
     def __repr__(self):
         return "<User {}>".format(self.id)
@@ -112,15 +112,17 @@ class User(PaginatedAPIMixin, db.Model):
         return data
     
     def from_dict(self, data, new_user=False, change_admin=False):
-        for field in ['id', 'username', 'surnames', 'email']:
-            if field in data:
-                setattr(self, field, data[field])
-            if new_user and 'password' in data:
-                self.set_password(data['password'])
-            if change_admin:
-                for field in ['active', 'admin', 'fileupload', 'listoperate', 'writenote', 'takepicture']:
-                    if field in data:
-                        setattr(self, field, data[field])
+        if new_user is False:
+            for field in ['id', 'username', 'surnames', 'email']:
+                if field in data:
+                    setattr(self, field, data[field])
+        if new_user and 'password' in data:
+            self.hash_password(data['password'])
+        if change_admin:
+            for field in ['active', 'admin', 'fileupload', 'listoperate', 'writenote', 'takepicture']:
+                if field in data:
+                    print("{} {}".format(field,data[field]))
+                    setattr(self, field, bool(data[field]))
                 
 
 class File(db.Model):

@@ -33,13 +33,13 @@ def create_app(config_class=Configuration):
     app.redis = Redis.from_url(app.config['REDIS_URL'])
     app.task_queue = rq.Queue('micro-tasks', connection=app.redis)
 
-    from .auth import bp as auth_blueprint
+    from core.auth import bp as auth_blueprint
     app.register_blueprint(auth_blueprint, url_prefix="/api/user/v1.0")
 
-    from .file_manager import file_mngr as file_mngr_blueprint
+    from core.file_manager import bp as file_mngr_blueprint
     app.register_blueprint(file_mngr_blueprint, url_prefix="/api/file/v1.0")
 
-    from .tasks import tasks_mngr as tasks_mngr_blueprint
+    from core.tasks import bp as tasks_mngr_blueprint
     app.register_blueprint(tasks_mngr_blueprint, url_prefix="/api/task/v1.0")
 
     if not app.debug:
