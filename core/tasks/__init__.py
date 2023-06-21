@@ -21,7 +21,7 @@ def tasks_manager_required():
             if claims["listoperate"]:
                 return fn(*args, **kwargs)
             else:
-                return jsonify(msg="List Operators only!"), 403
+                return jsonify(message="List Operators only!"), 403
 
         return decorator
 
@@ -37,13 +37,13 @@ def new_task():
     description = request.json.get('description', "")
     filename = request.json.get('filename', None)
     if task is None:
-        return jsonify({"msg": "No task especified"})
+        return jsonify({"message": "No task especified"})
     if filename is None:
-        return jsonify({"msg": "File not especified"})
+        return jsonify({"message": "File not especified"})
     if user.get_task_in_progress("example"):
-        return jsonify({"msg": "A task is currently in progress"})
+        return jsonify({"message": "A task is currently in progress"})
     else:
         user.launch_task(task, description, filename)
         db.session.commit()
-    return jsonify({"msg": "task launched"})
+    return jsonify({"message": "task launched"})
 

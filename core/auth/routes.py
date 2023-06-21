@@ -35,7 +35,7 @@ def admin_required():
             if claims["admin"]:
                 return fn(*args, **kwargs)
             else:
-                return jsonify(msg="Admins only!"), 403
+                return jsonify(message="Admins only!"), 403
 
         return decorator
 
@@ -120,7 +120,7 @@ def search_user():
     elif surnames is not None:
         users = User.query.filter(User.surnames.like("%"+surnames+"%"))
     else:
-        return jsonify({"msg": "no data sent"})
+        return bad_request("no data sent")
     data = User.to_collection_dict(users, page, per_page, 'auth.search_user')
     return jsonify(data)
 
@@ -137,7 +137,7 @@ def new_password():
         db.session.commit()
         return jsonify(user.to_dict()), 200
 
-    return bad_request('Bad password')
+    return bad_request('Wrong password')
 
 
 @bp.route("/logged_in", methods=["GET"])
@@ -188,7 +188,7 @@ def login():
 
     user = User.query.filter_by(id=id).one_or_none()
     if not user or not user.check_password(password):
-        return jsonify(msg="Wrong username or password"), 401
+        return bad_request("Wrong username or password")
 
     access_token = create_access_token(identity=user.id)
     refresh_token = create_refresh_token(identity=user.id)
@@ -211,7 +211,7 @@ def logout():
     jwt_redis_blocklist.set(jti, "", ex=ACCESS_EXPIRES)
 
     # Returns "Access token revoked" or "Refresh token revoked"
-    return jsonify(msg=f"{ttype.capitalize()} token successfully revoked")
+    return jsonify(message=f"{ttype.capitalize()} token successfully revoked")
 
 @jwt.expired_token_loader
 def my_expired_token_callback(jwt_header, jwt_payload):

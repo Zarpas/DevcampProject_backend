@@ -29,7 +29,7 @@ def file_upload_required():
             if claims["fileupload"]:
                 return fn(*args, **kwargs)
             else:
-                return jsonify(msg="File Uploaders only!"), 403
+                return jsonify(message="File Uploaders only!"), 403
 
         return decorator
 
