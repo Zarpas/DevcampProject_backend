@@ -157,7 +157,7 @@ class User(PaginatedAPIMixin, db.Model):
                     setattr(self, field, bool(data[field]))
 
 
-class File(db.Model):
+class File(PaginatedAPIMixin, db.Model):
     __tablename__ = "file"
     id = db.Column(db.Integer, primary_key=True)
     filename = db.Column(db.String(255), nullable=False)
@@ -170,16 +170,39 @@ class File(db.Model):
         self.sender = sender
 
     def __repr__(self):
-        return "{} - {}".format(self.filename, self.sender)
+        return "<File {}".format(self.id)
+    
+    def to_dict(self):
+        data = {
+            "id": self.id,
+            "filename": self.filename,
+            "sended": self.sended.isoformat() + "Z",
+            "processed": self.processed,
+            "_links": {"self": url_for("file_manager.get_file", id=self.id),
+                       "sender_id": url_for("aut.get_user", id=self.id)},
+        }
+        
+        return data
+    
+    def from_dict(self, data, new_file=False, change_processed=False):
+        if new_file:
+            if "filename" in data:
+                self.filename = data["filename"]
+        if change_processed:
+            if "processed" in data:
+                self.processed = bool(data["processed"])
 
 
-class Task(db.Model):
+class Task(PaginatedAPIMixin, db.Model):
     __tablename__ = "tasks"
     id = db.Column(db.String(36), primary_key=True)
     name = db.Column(db.String(128), index=True)
     description = db.Column(db.String(128))
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
     complete = db.Column(db.Boolean, default=False)
+
+    def __repr__(self):
+        return "<Task {}".format(self.id)
 
     def get_rq_job(self):
         try:
@@ -191,9 +214,13 @@ class Task(db.Model):
     def get_progress(self):
         job = self.get_rq_job()
         return job.meta.get("progress", 0) if job is not None else 100
+    
+    def to_dict(self):
+        # todo
+        pass
 
 
-class Message(db.Model):
+class Message(PaginatedAPIMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     sender_id = db.Column(db.Integer, db.ForeignKey("user.id"))
     recipient_id = db.Column(db.Integer, db.ForeignKey("user.id"))
@@ -203,9 +230,13 @@ class Message(db.Model):
 
     def __repr__(self):
         return "<Message {}>".format(self.body)
+    
+    def to_dict(self):
+        # todo
+        pass
 
 
-class Notification(db.Model):
+class Notification(PaginatedAPIMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), index=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
@@ -213,14 +244,21 @@ class Notification(db.Model):
     payload_json = db.Column(db.Text)
     readed = db.Column(db.Boolean)
 
+    def __repr__(self):
+        return "<Notification []>".format(self.id)
+
     def get_data(self):
         return json.loads(str(self.payload_json))
 
     def set_data(self, data):
         return json.dumps(data)
+    
+    def to_dict(self):
+        # todo
+        pass
 
 
-class List(db.Model):
+class List(PaginatedAPIMixin, db.Model):
     __tablename__ = "list"
     id = db.Column(db.Integer, primary_key=True)
     list_code = db.Column(db.String(20), index=True, nullable=False)
@@ -237,10 +275,14 @@ class List(db.Model):
         self.revision = revision
 
     def __repr__(self):
-        return "{} - {}".format(self.list_code, self.description)
+        return "<List {}>".format(self.id)
+    
+    def to_dict(self):
+        # todo
+        pass
 
 
-class WireList(db.Model):
+class WireList(PaginatedAPIMixin, db.Model):
     __tablename__ = "wire_list"
     id = db.Column(db.Integer, primary_key=True)
     order = db.Column(db.String(6))
@@ -287,3 +329,10 @@ class WireList(db.Model):
     seguridad = db.Column(db.String(3))
     etiqueta = db.Column(db.String(10))
     etiqueta_pant = db.Column(db.String(10))
+
+    def __repr__(self):
+        return "<WireList {}>".format(self.id)
+    
+    def to_dict(self):
+        # todo
+        pass

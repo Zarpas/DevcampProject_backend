@@ -11,6 +11,7 @@ from flask_jwt_extended import get_jwt
 from core import db
 from config import Configuration
 from core.file_manager import bp
+from core.auth.errors import bad_request
 
 
 UPLOAD_DIRECTORY = Configuration.UPLOAD_FOLDER
@@ -79,12 +80,15 @@ def list_files():
 @bp.route("/file", methods=["GET"])
 @file_upload_required()
 def get_file():
-    # id = request.json.get("id")
-    # file = File.query.get(id)
-    # if file is None:
-    #     return {"msg": "file not found"}, 400
-    # return file_schema.jsonify(file)
-    pass
+    if request.is_json:
+        if "id" in request.json:
+            id = request.json.get("id", None)
+    elif "id" in request.args:
+        id = request.args.get("id", None)
+    else:
+        return bad_request("You need to identify the user.")
+    return  jsonify(File.query.get_or_404(id).to_dict())
+
 
 
 @bp.route("/file", methods=["DELETE"])
