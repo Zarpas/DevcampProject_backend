@@ -70,20 +70,12 @@ class User(PaginatedAPIMixin, db.Model):
     def check_password(self, password):
         return myctx.verify(password, self.password_hash)
 
-    # def __init__(self, id, username, surnames, email, password):
-    #     self.id = id
-    #     self.username = username
-    #     self.surnames = surnames
-    #     self.email = email
-    #     self.password_hash = self.hash_password(password)
-
     def __repr__(self):
         return "<User {}>".format(self.id)
 
     def launch_task(self, name, description, *args, **kwargs):
-        rq_job = current_app.task_queue.enqueue(
-            "core.tasks.tasks." + name, self.id, *args, **kwargs
-        )
+        rq_job = current_app.task_queue.enqueue('core.task_manager.tasks.' + name, self.id,
+                                                *args, **kwargs)
         task = Task(
             id=rq_job.get_id(), name=name, description=description, user_id=self.id
         )
@@ -165,9 +157,9 @@ class File(PaginatedAPIMixin, db.Model):
     sended = db.Column(db.DateTime, default=datetime.utcnow)
     processed = db.Column(db.Boolean, default=False)
 
-    def __init__(self, filename, sender):
-        self.filename = filename
-        self.sender = sender
+    # def __init__(self, filename, sender):
+    #     self.filename = filename
+    #     self.sender = sender
 
     def __repr__(self):
         return "<File {}".format(self.id)
@@ -179,7 +171,8 @@ class File(PaginatedAPIMixin, db.Model):
             "sended": self.sended.isoformat() + "Z",
             "processed": self.processed,
             "_links": {"self": url_for("file_manager.get_file", id=self.id),
-                       "sender_id": url_for("aut.get_user", id=self.id)},
+                       "sender_id": url_for("auth.get_user", id=self.sender_id),
+                       "delete": url_for('file_manager.delete_file', id=self.id),},
         }
         
         return data
@@ -202,7 +195,7 @@ class Task(PaginatedAPIMixin, db.Model):
     complete = db.Column(db.Boolean, default=False)
 
     def __repr__(self):
-        return "<Task {}".format(self.id)
+        return "<Task {}>".format(self.id)
 
     def get_rq_job(self):
         try:
@@ -216,8 +209,17 @@ class Task(PaginatedAPIMixin, db.Model):
         return job.meta.get("progress", 0) if job is not None else 100
     
     def to_dict(self):
-        # todo
-        pass
+        data = {
+            'id': self.id,
+            'name': self.name,
+            'description': self.description,
+            'complete': self.complete,
+            '_links': {
+                'self': url_for('task_manager.get_task', id=self.id),
+                'user': url_for('auth.get_user', id=self.user_id)
+            }
+        }
+        return data
 
 
 class Message(PaginatedAPIMixin, db.Model):
@@ -232,8 +234,18 @@ class Message(PaginatedAPIMixin, db.Model):
         return "<Message {}>".format(self.body)
     
     def to_dict(self):
-        # todo
-        pass
+        data = {
+            'id': self.id,
+            'body': self.body,
+            'timestamp': self.timestamp.isoformat() + 'Z',
+            'readed': self.readed,
+            '_links': {
+                'self': url_for('message.get_message', id=self.id),
+                'sender': url_for('auth.get_user', id=self.sender_id),
+                'recipient': url_for('auth.get_user', id=self.recipient_id)
+            }
+        }
+        return data
 
 
 class Notification(PaginatedAPIMixin, db.Model):
@@ -245,7 +257,7 @@ class Notification(PaginatedAPIMixin, db.Model):
     readed = db.Column(db.Boolean)
 
     def __repr__(self):
-        return "<Notification []>".format(self.id)
+        return "<Notification {}>".format(self.id)
 
     def get_data(self):
         return json.loads(str(self.payload_json))
@@ -254,8 +266,18 @@ class Notification(PaginatedAPIMixin, db.Model):
         return json.dumps(data)
     
     def to_dict(self):
-        # todo
-        pass
+        data = {
+            'id': self.id,
+            'name': self.name,
+            'timestamp': self.timestamp.isoformat() + 'Z',
+            'payload_json': self.payload_json,
+            'readed': self.readed,
+            '_links': {
+                'self': url_for('notification.get_notification', id=self.id),
+                'user': url_for('auth.get_user', id=self.user_id)
+            }
+        }
+        return data
 
 
 class List(PaginatedAPIMixin, db.Model):
@@ -278,8 +300,18 @@ class List(PaginatedAPIMixin, db.Model):
         return "<List {}>".format(self.id)
     
     def to_dict(self):
-        # todo
-        pass
+        data = {
+            'id': self.id,
+            'list_code': self.list_code,
+            'description': self.description,
+            'edition': self.edition,
+            'revision': self.revision,
+            'project': self.project,
+            '_links': {
+                'self': url_for('list.get_list', id=self.id)
+            }
+        }
+        return data
 
 
 class WireList(PaginatedAPIMixin, db.Model):
@@ -334,5 +366,54 @@ class WireList(PaginatedAPIMixin, db.Model):
         return "<WireList {}>".format(self.id)
     
     def to_dict(self):
-        # todo
-        pass
+        data = {
+            'id' : self.id, 
+            'order': self.order,
+            'edicion': self.edicion,
+            'zona1': self.zona1,
+            'zona2': self.zona2,
+            'zona3': self.zona3,
+            'zona4': self.zona4,
+            'zona5': self.zona5,
+            'zona6': self.zona6,
+            'zona7': self.zona7,
+            'zona8': self.zona8,
+            'zona9': self.zona9,
+            'zona10': self.zona10,
+            'zona11': self.zona11,
+            'zona12': self.zona12,
+            'cable_num': self.cable_num,
+            'codig_pant': self.codig_pant,
+            'senal_pant': self.senal_pant,
+            'sub_pant': self.sub_pant,
+            'clase': self.clase,
+            'lugarpro': self.lugarpro,
+            'aparatopro': self.aparatopro,
+            'bornapro': self.bornapro,
+            'esquemapro': self.esquemapro,
+            'lugardes': self.lugardes,
+            'aparatodes': self.aparatodes,
+            'bornades': self.bornades,
+            'esquemades': self.esquemades,
+            'seccion': self.seccion,
+            'longitud': self.longitud,
+            'codigocabl': self.codigocabl,
+            'terminalor': self.terminalor,
+            'terminalde': self.terminalde,
+            'observacion': self.observacion,
+            'num_mazo': self.num_mazo,
+            'codigo': self.codigo,
+            'potencial': self.potencial,
+            'peso': self.peso,
+            'codrefcabl': self.codrefcabl,
+            'codreftori': self.codreftori,
+            'codreftdes': self.codreftdes,
+            'num_solucion': self.num_solucion,
+            'seguridad': self.seguridad,
+            'etiqueta': self.etiqueta,
+            'etiqueta_pant': self.etiqueta_pant,
+            '_links': {
+                'self': url_for('wirelist.get_wire', id=self.id)
+            }
+        }
+        return data

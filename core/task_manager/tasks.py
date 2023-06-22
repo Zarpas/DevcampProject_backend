@@ -1,12 +1,11 @@
 import time
 from rq import get_current_job
 
-from core import db, app
+from core import create_app
+from core import db
 from core.models import Task
 
-
-# app.push()
-
+app = create_app()
 
 def _set_task_progress(progress):
     with app.app_context():
@@ -22,16 +21,17 @@ def _set_task_progress(progress):
 
 
 def example(user, seconds):
-    _set_task_progress(0)
-    job = get_current_job()
-    seconds = int(seconds)
-    print("Starting task")
-    for i in range(seconds):
-        print(i)
-        _set_task_progress(100 * i // seconds)
-        time.sleep(1)
-    _set_task_progress(100)
-    print("Task completed")
+    with app.app_context():
+        _set_task_progress(0)
+        job = get_current_job()
+        seconds = int(seconds)
+        print("Starting task")
+        for i in range(seconds):
+            print(i)
+            _set_task_progress(100 * i // seconds)
+            time.sleep(1)
+        _set_task_progress(100)
+        print("Task completed")
 
 
 def import_list(user, filename):

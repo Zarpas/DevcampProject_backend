@@ -40,9 +40,9 @@ def create_app(config_class=Configuration):
 
     app.register_blueprint(file_mngr_blueprint, url_prefix="/api/file/v1.0")
 
-    from core.tasks import bp as tasks_mngr_blueprint
+    from core.task_manager import bp as task_mngr_blueprint
 
-    app.register_blueprint(tasks_mngr_blueprint, url_prefix="/api/task/v1.0")
+    app.register_blueprint(task_mngr_blueprint, url_prefix="/api/task/v1.0")
 
     if not app.debug:
         auth = None

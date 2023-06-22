@@ -11,7 +11,7 @@ from flask_jwt_extended import get_jwt
 from core import db
 from config import Configuration
 from core.file_manager import bp
-from core.auth.errors import bad_request
+from core.errors import bad_request
 
 
 UPLOAD_DIRECTORY = Configuration.UPLOAD_FOLDER
@@ -45,36 +45,43 @@ def allowed_file(filename):
 @bp.route("/file", methods=["POST"])
 @file_upload_required()
 def post_file():
-    # if "filename" not in request.files:
-    #     return {"msg": "No file part"}, 400
-    # filename = request.files["filename"]
-    # id = get_jwt_identity()
-    # if filename.filename == "":
-    #     return {"msg": "No selected file"}, 412
+    if "filename" not in request.files:
+        return bad_request("No file part")
+    filename = request.files["filename"]
+    if filename.filename == "":
+        return bad_request("No selected file")
 
-    # if filename and allowed_file(filename.filename):
-    #     filename.save(
-    #         os.path.join(UPLOAD_DIRECTORY, secure_filename(filename.filename))
-    #     )
-    #     file = File(
-    #         os.path.join(UPLOAD_DIRECTORY, secure_filename(filename.filename)), id
-    #     )
-    #     db.session.add(file)
-    #     db.session.commit()
-    # else:
-    #     return {"msg": "Not allowed filetype"}, 415
+    id = get_jwt_identity()
+    user = User.query.get(id)
 
-    # return file_schema.jsonify(file)
-    pass
+    if filename and allowed_file(filename.filename):
+        # todo: check if the file already exists.
+        filename.save(
+            os.path.join(UPLOAD_DIRECTORY, secure_filename(filename.filename))
+        )
+        file = File()
+        file.filename = os.path.join(UPLOAD_DIRECTORY, secure_filename(filename.filename))
+        file.sender_id = user.id
+        
+        db.session.add(file)
+        db.session.commit()
+    else:
+        return bad_request("Not allowed filetype")
+
+    return jsonify(file.to_dict())
 
 
 @bp.route("/files", methods=["GET"])
 @file_upload_required()
-def list_files():
-    # files = File.query.all()
-    # print(files)
-    # return files_schema.jsonify(files)
-    pass
+def get_file_list():
+    page = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 10, type=int)
+
+    data = File.to_collection_dict(
+        File.query, page, per_page, "file_manager.get_file_list"
+    )
+
+    return jsonify(data)
 
 
 @bp.route("/file", methods=["GET"])
@@ -86,25 +93,34 @@ def get_file():
     elif "id" in request.args:
         id = request.args.get("id", None)
     else:
-        return bad_request("You need to identify the user.")
-    return  jsonify(File.query.get_or_404(id).to_dict())
-
+        return bad_request("You need to identify the file.")
+    return jsonify(File.query.get_or_404(id).to_dict())
 
 
 @bp.route("/file", methods=["DELETE"])
 @file_upload_required()
 def delete_file():
-    # id = request.json.get("id")
-    # file = File.query.get(id)
-    # if file is None:
-    #     return {"msg": "file not found"}, 400
-    # try:
-    #     os.remove(file.filename)
-    #     response = {}
-    # except FileNotFoundError:
-    #     response["error"] = "file not found"
-    # db.session.delete(file)
-    # db.session.commit()
-    # response["msg"] = "file deleted"
-    # return response
-    pass
+    if request.is_json:
+        if "id" in request.json:
+            id = request.json.get("id", None)
+    elif "id" in request.args:
+        id = request.args.get("id", None)
+    else:
+        return bad_request("You need to identify the file.")
+    
+    file = File.query.get(id)
+
+    if file is None:
+        return bad_request("file not found")
+    
+    response = {}
+    try:
+        os.remove(file.filename)
+    except FileNotFoundError:
+        response["error"] = "file not found"
+    
+    db.session.delete(file)
+    db.session.commit()
+    response["message"] = "file deleted"
+    return response
+    

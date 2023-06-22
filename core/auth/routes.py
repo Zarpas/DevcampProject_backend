@@ -21,7 +21,7 @@ from datetime import timezone
 from core import db, jwt
 from core.auth import bp
 from core.models import User
-from core.auth.errors import bad_request
+from core.errors import bad_request, error_response
 from config import Configuration
 
 
@@ -233,7 +233,7 @@ def logout():
 
 @jwt.expired_token_loader
 def my_expired_token_callback(jwt_header, jwt_payload):
-    return jsonify(code="dave", err="I can't let you do that"), 401
+    return error_response(401, "Token expired")
 
 
 @jwt.token_in_blocklist_loader
