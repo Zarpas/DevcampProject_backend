@@ -1,5 +1,5 @@
 from core import create_app, db
-from core.models import User, File, Task, Message, Notification, List, WireList
+from core.models import User, File, Task, Message, Notification, CodeList, WireList
 
 app = create_app()
 
@@ -13,6 +13,6 @@ def make_shell_context():
         "Task": Task,
         "Message": Message,
         "Notification": Notification,
-        "List": List,
+        "CodeList": CodeList,
         "WireList": WireList,
     }

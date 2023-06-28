@@ -32,7 +32,7 @@ def create_app(config_class=Configuration):
     app.redis = Redis.from_url(app.config["REDIS_URL"])
     app.task_queue = rq.Queue("micro-tasks", connection=app.redis)
 
-    from core.auth import bp as auth_blueprint
+    from core.auth_manager import bp as auth_blueprint
 
     app.register_blueprint(auth_blueprint, url_prefix="/api/user/v1.0")
 

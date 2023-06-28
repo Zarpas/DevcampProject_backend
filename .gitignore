@@ -4,5 +4,8 @@ database.db
 migrations
 .vscode
 logs/*
-
+core/static/uploads
+dummy*
 logs/server.log
+database_old.db
+mail.sh

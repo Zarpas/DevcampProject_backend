@@ -112,7 +112,7 @@ class User(PaginatedAPIMixin, db.Model):
             "username": self.username,
             "surnames": self.surnames,
             "last_seen": self.last_seen.isoformat() + "Z",
-            "_links": {"self": url_for("auth.get_user", id=self.id)},
+            "_links": {"self": url_for("auth_manager.get_user", id=self.id)},
         }
         if include_email:
             data["email"] = self.email
@@ -157,12 +157,8 @@ class File(PaginatedAPIMixin, db.Model):
     sended = db.Column(db.DateTime, default=datetime.utcnow)
     processed = db.Column(db.Boolean, default=False)
 
-    # def __init__(self, filename, sender):
-    #     self.filename = filename
-    #     self.sender = sender
-
     def __repr__(self):
-        return "<File {}".format(self.id)
+        return "<File {}>".format(self.id)
     
     def to_dict(self):
         data = {
@@ -171,7 +167,7 @@ class File(PaginatedAPIMixin, db.Model):
             "sended": self.sended.isoformat() + "Z",
             "processed": self.processed,
             "_links": {"self": url_for("file_manager.get_file", id=self.id),
-                       "sender_id": url_for("auth.get_user", id=self.sender_id),
+                       "sender_id": url_for("auth_manager.get_user", id=self.sender_id),
                        "delete": url_for('file_manager.delete_file', id=self.id),},
         }
         
@@ -187,7 +183,7 @@ class File(PaginatedAPIMixin, db.Model):
 
 
 class Task(PaginatedAPIMixin, db.Model):
-    __tablename__ = "tasks"
+    __tablename__ = "task"
     id = db.Column(db.String(36), primary_key=True)
     name = db.Column(db.String(128), index=True)
     description = db.Column(db.String(128))
@@ -216,13 +212,14 @@ class Task(PaginatedAPIMixin, db.Model):
             'complete': self.complete,
             '_links': {
                 'self': url_for('task_manager.get_task', id=self.id),
-                'user': url_for('auth.get_user', id=self.user_id)
+                'user': url_for('auth_manager.get_user', id=self.user_id)
             }
         }
         return data
 
 
 class Message(PaginatedAPIMixin, db.Model):
+    __tablename__ = 'message'
     id = db.Column(db.Integer, primary_key=True)
     sender_id = db.Column(db.Integer, db.ForeignKey("user.id"))
     recipient_id = db.Column(db.Integer, db.ForeignKey("user.id"))
@@ -241,14 +238,20 @@ class Message(PaginatedAPIMixin, db.Model):
             'readed': self.readed,
             '_links': {
                 'self': url_for('message.get_message', id=self.id),
-                'sender': url_for('auth.get_user', id=self.sender_id),
-                'recipient': url_for('auth.get_user', id=self.recipient_id)
+                'sender': url_for('auth_manager.get_user', id=self.sender_id),
+                'recipient': url_for('auth_manager.get_user', id=self.recipient_id)
             }
         }
         return data
+    
+    def from_dict(self, data):
+        for field in ["sender_id", "recipient_id", "body"]:
+                if field in data:
+                    setattr(self, field, data[field])
 
 
 class Notification(PaginatedAPIMixin, db.Model):
+    __tablename__ = 'notification'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), index=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
@@ -273,28 +276,21 @@ class Notification(PaginatedAPIMixin, db.Model):
             'payload_json': self.payload_json,
             'readed': self.readed,
             '_links': {
-                'self': url_for('notification.get_notification', id=self.id),
-                'user': url_for('auth.get_user', id=self.user_id)
+                'self': url_for('notification_manager.get_notification', id=self.id),
+                'user': url_for('auth_manager.get_user', id=self.user_id)
             }
         }
         return data
 
 
-class List(PaginatedAPIMixin, db.Model):
-    __tablename__ = "list"
+class CodeList(PaginatedAPIMixin, db.Model):
+    __tablename__ = "codelist"
     id = db.Column(db.Integer, primary_key=True)
     list_code = db.Column(db.String(20), index=True, nullable=False)
     description = db.Column(db.String(70), nullable=False)
     edition = db.Column(db.String(6), nullable=False)
     revision = db.Column(db.Integer, nullable=True)
     project = db.Column(db.String(50), nullable=False)
-
-    def __init__(self, list_code, description, project, edition, revision):
-        self.list_code = list_code
-        self.description = description
-        self.project = project
-        self.edition = edition
-        self.revision = revision
 
     def __repr__(self):
         return "<List {}>".format(self.id)
@@ -308,14 +304,19 @@ class List(PaginatedAPIMixin, db.Model):
             'revision': self.revision,
             'project': self.project,
             '_links': {
-                'self': url_for('list.get_list', id=self.id)
+                'self': url_for('codelist.get_list', id=self.id)
             }
         }
         return data
+    
+    def from_dict(self, data):
+        for field in ["list_code", "description", "edition", "revision", "project"]:
+                if field in data:
+                    setattr(self, field, data[field])
 
 
 class WireList(PaginatedAPIMixin, db.Model):
-    __tablename__ = "wire_list"
+    __tablename__ = "wirelist"
     id = db.Column(db.Integer, primary_key=True)
     order = db.Column(db.String(6))
     edicion = db.Column(db.String(2))
@@ -417,3 +418,13 @@ class WireList(PaginatedAPIMixin, db.Model):
             }
         }
         return data
+    
+    def from_dict(self, data):
+        for field in ['order', 'edicion', 'zona1', 'zona2', 'zona3', 'zona4', 'zona5', 'zona6', 'zona7',
+                    'zona8', 'zona9', 'zona10', 'zona11', 'zona12', 'cable_num', 'codig_pant', 'senal_pant',
+                    'sub_pant', 'clase', 'lugarpro', 'aparatopro', 'bornapro', 'esquemapro', 'lugardes',
+                    'aparatodes', 'bornades', 'esquemades', 'seccion', 'longitud', 'codigocabl', 'terminalor',
+                    'terminalde', 'observacion', 'num_mazo', 'codigo', 'potencial', 'peso', 'codrefcabl',
+                    'codreftori', 'codreftdes', 'num_solucion', 'seguridad', 'etiqueta', 'etiqueta_pant']:
+            if field in data:
+                setattr(self, field, data[field])

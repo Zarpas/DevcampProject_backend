@@ -19,7 +19,7 @@ from datetime import timedelta
 from datetime import timezone
 
 from core import db, jwt
-from core.auth import bp
+from core.auth_manager import bp
 from core.models import User
 from core.errors import bad_request, error_response
 from config import Configuration
@@ -115,7 +115,7 @@ def get_user_list():
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 10, type=int)
 
-    data = User.to_collection_dict(User.query, page, per_page, "auth.get_user_list")
+    data = User.to_collection_dict(User.query, page, per_page, "auth_manager.get_user_list")
 
     return jsonify(data)
 
@@ -137,7 +137,7 @@ def search_user():
         users = User.query.filter(User.surnames.like("%" + surnames + "%"))
     else:
         return bad_request("no data sent")
-    data = User.to_collection_dict(users, page, per_page, "auth.search_user")
+    data = User.to_collection_dict(users, page, per_page, "auth_manager.search_user")
     return jsonify(data)
 
 
