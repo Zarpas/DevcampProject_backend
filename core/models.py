@@ -291,6 +291,9 @@ class CodeList(PaginatedAPIMixin, db.Model):
     edition = db.Column(db.String(6), nullable=False)
     revision = db.Column(db.Integer, nullable=True)
     project = db.Column(db.String(50), nullable=False)
+    wirelist_owner = db.relationship(
+        "wirelist", foreign_keys="WireList.owner_id", backref="owner", lazy="dynamic"
+    )
 
     def __repr__(self):
         return "<List {}>".format(self.id)
@@ -318,6 +321,7 @@ class CodeList(PaginatedAPIMixin, db.Model):
 class WireList(PaginatedAPIMixin, db.Model):
     __tablename__ = "wirelist"
     id = db.Column(db.Integer, primary_key=True)
+    owner_id = db.Column(db.Integer, db.ForeignKey("codelist.id"))
     order = db.Column(db.String(6))
     edicion = db.Column(db.String(2))
     zona1 = db.Column(db.String(3))
@@ -414,7 +418,7 @@ class WireList(PaginatedAPIMixin, db.Model):
             'etiqueta': self.etiqueta,
             'etiqueta_pant': self.etiqueta_pant,
             '_links': {
-                'self': url_for('wirelist.get_wire', id=self.id)
+                'self': url_for('wirelist_manager.get_wire', id=self.id)
             }
         }
         return data
