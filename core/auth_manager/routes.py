@@ -100,8 +100,8 @@ def user_admin():
 
     if (
         "username" in data
-        and data["username"] != user.username
-        and "surnames" in data
+        and data["username"] != user.username) or (
+        "surnames" in data
         and data["surnames"] != user.surnames
     ):
         return bad_request("You can not change your name")
@@ -153,7 +153,7 @@ def search_user():
 @jwt_required()
 def new_password():
     id = get_jwt_identity()
-    user = User.query.get(id)
+    user = db.session.get(User, id)
     old_password = request.json.get("old_password")
     new_password = request.json.get("new_password")
     if user.check_password(old_password):
@@ -169,7 +169,7 @@ def new_password():
 def logged_in():
     if verify_jwt_in_request(optional=True):
         id = get_jwt_identity()
-        user = User.query.get(id)
+        user = db.session.get(User, id)
         response = user.to_dict(include_roles=True)
         response["logged_in"] = True
         return jsonify(response)

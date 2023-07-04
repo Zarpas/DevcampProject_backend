@@ -39,13 +39,13 @@ class AuthActions(object):
         self._access_token = token
 
     def get_access_token(self):
-        return "Bearer {}".format(self._access_token)
+        return self._access_token
     
     def set_refresh_token(self, token):
         self._refresh_token = token
 
     def get_refresh_token(self):
-        return "Bearer {}".format(self._refresh_token)
+        return self._refresh_token
 
     def login(self, id='1', password='test'):
         headers = {"content-type": "application/json"}
@@ -55,7 +55,7 @@ class AuthActions(object):
         )
     
     def logout(self, token):
-        headers = {"Authorization": token}
+        headers = {"Authorization": f"Bearer {token}"}
         return self._client.delete('/api/user/v1.0/logout', headers=headers)
 
 @pytest.fixture
