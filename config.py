@@ -6,13 +6,17 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 load_dotenv(os.path.join(basedir, ".env"))
 
 
-class Configuration(object):
-    SECRET_KEY = os.environ.get("SECRET_KEY")
+class Config(object):
+    TESTING = False
+    DB_SERVER = '127.0.0.1'
 
-    SQLALCHEMY_DATABASE_URI = os.environ.get(
-        "DATABASE_URL"
-    ) or "sqlite:///" + os.path.join(basedir, "database.db")
+    @property
+    def SQLALCHEMY_DATABASE_URI(self):
+        return f"sqlite:///" + os.path.join(basedir, "database.db")
+
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+    SECRET_KEY = os.environ.get("SECRET_KEY")
 
     JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY")
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
@@ -27,11 +31,27 @@ class Configuration(object):
     MAIL_USE_TLS = os.environ.get("MAIL_USE_TLS") is not None
     MAIL_USERNAME = os.environ.get("MAIL_USERNAME")
     MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
-    ADMINS = ["igor@example.com"]
+    ADMINS = []
 
     REDIS_URL = os.environ.get("REDIS_URL") or "redis://"
 
-    ELASTICSEARCH_URL = os.environ.get("ELASTICSEARCH_URL")
-
     CORS_SUPPORTS_CREDENTIALS = True
     CORS_METHODS = ["GET", "HEAD", "POST", "OPTIONS", "PUT", "PATCH", "DELETE"]
+
+    # ELASTICSEARCH_URL = os.environ.get("ELASTICSEARCH_URL")
+
+
+class ProductionConfiguration(Config):
+    """Uses production database server."""
+    pass
+
+class DevelopmentConfiguration(Config):
+    SQLALCHEMY_DATABASE_URI = "sqlite:///" + os.path.join(basedir, "database.db")
+
+    ADMINS = ["igor@example.com"]
+
+
+class TestConfiguration(Config):
+    TESTING = True
+    DB_SERVER = 'localhost'
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(basedir, "tests/database.sqlite")

@@ -9,3 +9,7 @@ dummy*
 logs/server.log
 database_old.db
 mail.sh
+.coverage
+
+
+tests/database.sqlite

@@ -1,9 +1,8 @@
 from flask import Flask, request, current_app
-from config import Configuration
+import config
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager, jwt_required
-from flask_marshmallow import Marshmallow
 from flask_cors import CORS
 from flask_mail import Mail
 import logging
@@ -20,7 +19,7 @@ migrate = Migrate()
 mail = Mail()
 
 
-def create_app(config_class=Configuration):
+def create_app(config_class=config.DevelopmentConfiguration):
     app = Flask(__name__)
     app.config.from_object(config_class)
 
@@ -32,17 +31,35 @@ def create_app(config_class=Configuration):
     app.redis = Redis.from_url(app.config["REDIS_URL"])
     app.task_queue = rq.Queue("micro-tasks", connection=app.redis)
 
-    from core.auth_manager import bp as auth_blueprint
+    @app.route('/hello')
+    def hello():
+        return 'Hello, World!'
+    
 
+    from core.auth_manager import bp as auth_blueprint
     app.register_blueprint(auth_blueprint, url_prefix="/api/user/v1.0")
 
     from core.file_manager import bp as file_mngr_blueprint
-
     app.register_blueprint(file_mngr_blueprint, url_prefix="/api/file/v1.0")
 
     from core.task_manager import bp as task_mngr_blueprint
-
     app.register_blueprint(task_mngr_blueprint, url_prefix="/api/task/v1.0")
+
+    from core.message_manager import bp as message_mngr_blueprint
+    app.register_blueprint(message_mngr_blueprint, url_prefix="/api/message/v1.0")
+
+    from core.codelist_manager import bp as codelist_mngr_blueprint
+    app.register_blueprint(codelist_mngr_blueprint, url_prefix="/api/codelist/v1.0")
+
+    from core.wirelist_manager import bp as wirelist_mngr_blueprint
+    app.register_blueprint(wirelist_mngr_blueprint, url_prefix="/api/wirelist/v1.0")
+
+    from core.note_manager import bp as note_mngr_blueprint
+    app.register_blueprint(note_mngr_blueprint, url_prefix="/api/note/v1.0")
+
+    from core.picture_manager import bp as picture_mngr_blueprint
+    app.register_blueprint(picture_mngr_blueprint, url_prefix="/api/picture/v1.0")
+
 
     if not app.debug:
         auth = None

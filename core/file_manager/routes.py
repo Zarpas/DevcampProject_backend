@@ -9,13 +9,13 @@ from flask_jwt_extended import verify_jwt_in_request
 from flask_jwt_extended import get_jwt
 
 from core import db
-from config import Configuration
+import config
 from core.file_manager import bp
 from core.errors import bad_request
 
 
-UPLOAD_DIRECTORY = Configuration.UPLOAD_FOLDER
-ALLOWED_EXTENSIONS = Configuration.ALLOWED_EXTENSIONS
+UPLOAD_DIRECTORY = config.Config.UPLOAD_FOLDER
+ALLOWED_EXTENSIONS = config.Config.ALLOWED_EXTENSIONS
 
 if not os.path.exists(UPLOAD_DIRECTORY):
     os.makedirs(UPLOAD_DIRECTORY)

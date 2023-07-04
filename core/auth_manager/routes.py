@@ -22,10 +22,10 @@ from core import db, jwt
 from core.auth_manager import bp
 from core.models import User
 from core.errors import bad_request, error_response
-from config import Configuration
+import config
 
 
-ACCESS_EXPIRES = Configuration.JWT_ACCESS_TOKEN_EXPIRES
+ACCESS_EXPIRES = config.Config.JWT_ACCESS_TOKEN_EXPIRES
 
 
 def admin_required():
@@ -55,13 +55,21 @@ def register():
         or "password" not in data
     ):
         return bad_request("Must include ID, username, surnames, email and password")
+    if (
+        data["id"] == ""
+        or data["username"] == ""
+        or data["email"] == ""
+        or data["password"] == ""
+    ):
+        return bad_request("Must include ID, username, surnames, email and password")
     if User.query.filter_by(id=data["id"]).first():
         return bad_request("Please use a different ID")
     if User.query.filter_by(email=data["email"]).first():
         return bad_request("Please use a different email address")
-
+    
     user = User()
     user.from_dict(data, new_user=True)
+
     db.session.add(user)
     db.session.commit()
 
@@ -204,6 +212,9 @@ def login():
     password = request.json.get("password", None)
 
     user = User.query.filter_by(id=id).one_or_none()
+    if user is None or password is None:
+        return bad_request("Wrong username or password")
+
     if not user or not user.check_password(password):
         return bad_request("Wrong username or password")
 

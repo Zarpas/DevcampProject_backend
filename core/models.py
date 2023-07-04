@@ -42,7 +42,7 @@ class User(PaginatedAPIMixin, db.Model):
     surnames = db.Column(db.String(40))
     password_hash = db.Column(db.String(128), nullable=False)
     email = db.Column(db.String(80))
-    registered = db.Column(db.DateTime, default=datetime.now())
+    registered = db.Column(db.DateTime, default=datetime.utcnow)
     admin = db.Column(db.Boolean(), default=False)
     fileupload = db.Column(db.Boolean(), default=False)
     listoperate = db.Column(db.Boolean(), default=False)
@@ -60,9 +60,24 @@ class User(PaginatedAPIMixin, db.Model):
         lazy="dynamic",
     )
     last_message_read_time = db.Column(db.DateTime)
-    file = db.relationship("File", backref="user", lazy="dynamic")
-    notifications = db.relationship("Notification", backref="user", lazy="dynamic")
-    task = db.relationship("Task", backref="user", lazy="dynamic")
+    file = db.relationship(
+        "File", foreign_keys="File.sender_id", backref="user", lazy="dynamic"
+    )
+    notifications = db.relationship(
+        "Notification",
+        foreign_keys="Notification.user_id",
+        backref="user",
+        lazy="dynamic",
+    )
+    task = db.relationship(
+        "Task", foreign_keys="Task.user_id", backref="user", lazy="dynamic"
+    )
+    picture = db.relationship(
+        "Picture", foreign_keys="Picture.sender_id", backref="user", lazy="dynamic"
+    )
+    note = db.relationship(
+        "Note", foreign_keys="Note.sender_id", backref="user", lazy="dynamic"
+    )
 
     def hash_password(self, password):
         self.password_hash = myctx.hash(password)
@@ -74,8 +89,9 @@ class User(PaginatedAPIMixin, db.Model):
         return "<User {}>".format(self.id)
 
     def launch_task(self, name, description, *args, **kwargs):
-        rq_job = current_app.task_queue.enqueue('core.task_manager.tasks.' + name, self.id,
-                                                *args, **kwargs)
+        rq_job = current_app.task_queue.enqueue(
+            "core.task_manager.tasks." + name, self.id, *args, **kwargs
+        )
         task = Task(
             id=rq_job.get_id(), name=name, description=description, user_id=self.id
         )
@@ -129,8 +145,9 @@ class User(PaginatedAPIMixin, db.Model):
         return data
 
     def from_dict(self, data, new_user=False, change_admin=False):
-        if new_user is False:
+        if new_user:
             for field in ["id", "username", "surnames", "email"]:
+                print("{} - {}".format(field, data[field]))
                 if field in data:
                     setattr(self, field, data[field])
         if new_user and "password" in data:
@@ -159,20 +176,22 @@ class File(PaginatedAPIMixin, db.Model):
 
     def __repr__(self):
         return "<File {}>".format(self.id)
-    
+
     def to_dict(self):
         data = {
             "id": self.id,
             "filename": self.filename,
             "sended": self.sended.isoformat() + "Z",
             "processed": self.processed,
-            "_links": {"self": url_for("file_manager.get_file", id=self.id),
-                       "sender_id": url_for("auth_manager.get_user", id=self.sender_id),
-                       "delete": url_for('file_manager.delete_file', id=self.id),},
+            "_links": {
+                "self": url_for("file_manager.get_file", id=self.id),
+                "sender_id": url_for("auth_manager.get_user", id=self.sender_id),
+                "delete": url_for("file_manager.delete_file", id=self.id),
+            },
         }
-        
+
         return data
-    
+
     def from_dict(self, data, new_file=False, change_processed=False):
         if new_file:
             if "filename" in data:
@@ -203,23 +222,23 @@ class Task(PaginatedAPIMixin, db.Model):
     def get_progress(self):
         job = self.get_rq_job()
         return job.meta.get("progress", 0) if job is not None else 100
-    
+
     def to_dict(self):
         data = {
-            'id': self.id,
-            'name': self.name,
-            'description': self.description,
-            'complete': self.complete,
-            '_links': {
-                'self': url_for('task_manager.get_task', id=self.id),
-                'user': url_for('auth_manager.get_user', id=self.user_id)
-            }
+            "id": self.id,
+            "name": self.name,
+            "description": self.description,
+            "complete": self.complete,
+            "_links": {
+                "self": url_for("task_manager.get_task", id=self.id),
+                "user": url_for("auth_manager.get_user", id=self.user_id),
+            },
         }
         return data
 
 
 class Message(PaginatedAPIMixin, db.Model):
-    __tablename__ = 'message'
+    __tablename__ = "message"
     id = db.Column(db.Integer, primary_key=True)
     sender_id = db.Column(db.Integer, db.ForeignKey("user.id"))
     recipient_id = db.Column(db.Integer, db.ForeignKey("user.id"))
@@ -229,29 +248,29 @@ class Message(PaginatedAPIMixin, db.Model):
 
     def __repr__(self):
         return "<Message {}>".format(self.body)
-    
+
     def to_dict(self):
         data = {
-            'id': self.id,
-            'body': self.body,
-            'timestamp': self.timestamp.isoformat() + 'Z',
-            'readed': self.readed,
-            '_links': {
-                'self': url_for('message.get_message', id=self.id),
-                'sender': url_for('auth_manager.get_user', id=self.sender_id),
-                'recipient': url_for('auth_manager.get_user', id=self.recipient_id)
-            }
+            "id": self.id,
+            "body": self.body,
+            "timestamp": self.timestamp.isoformat() + "Z",
+            "readed": self.readed,
+            "_links": {
+                "self": url_for("message.get_message", id=self.id),
+                "sender": url_for("auth_manager.get_user", id=self.sender_id),
+                "recipient": url_for("auth_manager.get_user", id=self.recipient_id),
+            },
         }
         return data
-    
+
     def from_dict(self, data):
         for field in ["sender_id", "recipient_id", "body"]:
-                if field in data:
-                    setattr(self, field, data[field])
+            if field in data:
+                setattr(self, field, data[field])
 
 
 class Notification(PaginatedAPIMixin, db.Model):
-    __tablename__ = 'notification'
+    __tablename__ = "notification"
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), index=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
@@ -267,18 +286,18 @@ class Notification(PaginatedAPIMixin, db.Model):
 
     def set_data(self, data):
         return json.dumps(data)
-    
+
     def to_dict(self):
         data = {
-            'id': self.id,
-            'name': self.name,
-            'timestamp': self.timestamp.isoformat() + 'Z',
-            'payload_json': self.payload_json,
-            'readed': self.readed,
-            '_links': {
-                'self': url_for('notification_manager.get_notification', id=self.id),
-                'user': url_for('auth_manager.get_user', id=self.user_id)
-            }
+            "id": self.id,
+            "name": self.name,
+            "timestamp": self.timestamp.isoformat() + "Z",
+            "payload_json": self.payload_json,
+            "readed": self.readed,
+            "_links": {
+                "self": url_for("notification_manager.get_notification", id=self.id),
+                "user": url_for("auth_manager.get_user", id=self.user_id),
+            },
         }
         return data
 
@@ -292,30 +311,28 @@ class CodeList(PaginatedAPIMixin, db.Model):
     revision = db.Column(db.Integer, nullable=True)
     project = db.Column(db.String(50), nullable=False)
     wirelist_owner = db.relationship(
-        "wirelist", foreign_keys="WireList.owner_id", backref="owner", lazy="dynamic"
+        "WireList", foreign_keys="WireList.owner_id", backref="owner", lazy="dynamic"
     )
 
     def __repr__(self):
         return "<List {}>".format(self.id)
-    
+
     def to_dict(self):
         data = {
-            'id': self.id,
-            'list_code': self.list_code,
-            'description': self.description,
-            'edition': self.edition,
-            'revision': self.revision,
-            'project': self.project,
-            '_links': {
-                'self': url_for('codelist.get_list', id=self.id)
-            }
+            "id": self.id,
+            "list_code": self.list_code,
+            "description": self.description,
+            "edition": self.edition,
+            "revision": self.revision,
+            "project": self.project,
+            "_links": {"self": url_for("codelist.get_codelist", id=self.id)},
         }
         return data
-    
+
     def from_dict(self, data):
         for field in ["list_code", "description", "edition", "revision", "project"]:
-                if field in data:
-                    setattr(self, field, data[field])
+            if field in data:
+                setattr(self, field, data[field])
 
 
 class WireList(PaginatedAPIMixin, db.Model):
@@ -366,69 +383,158 @@ class WireList(PaginatedAPIMixin, db.Model):
     seguridad = db.Column(db.String(3))
     etiqueta = db.Column(db.String(10))
     etiqueta_pant = db.Column(db.String(10))
+    note = db.relationship(
+        "Note", foreign_keys="Note.reference_id", backref="wire", lazy="dynamic"
+    )
 
     def __repr__(self):
         return "<WireList {}>".format(self.id)
-    
+
     def to_dict(self):
         data = {
-            'id' : self.id, 
-            'order': self.order,
-            'edicion': self.edicion,
-            'zona1': self.zona1,
-            'zona2': self.zona2,
-            'zona3': self.zona3,
-            'zona4': self.zona4,
-            'zona5': self.zona5,
-            'zona6': self.zona6,
-            'zona7': self.zona7,
-            'zona8': self.zona8,
-            'zona9': self.zona9,
-            'zona10': self.zona10,
-            'zona11': self.zona11,
-            'zona12': self.zona12,
-            'cable_num': self.cable_num,
-            'codig_pant': self.codig_pant,
-            'senal_pant': self.senal_pant,
-            'sub_pant': self.sub_pant,
-            'clase': self.clase,
-            'lugarpro': self.lugarpro,
-            'aparatopro': self.aparatopro,
-            'bornapro': self.bornapro,
-            'esquemapro': self.esquemapro,
-            'lugardes': self.lugardes,
-            'aparatodes': self.aparatodes,
-            'bornades': self.bornades,
-            'esquemades': self.esquemades,
-            'seccion': self.seccion,
-            'longitud': self.longitud,
-            'codigocabl': self.codigocabl,
-            'terminalor': self.terminalor,
-            'terminalde': self.terminalde,
-            'observacion': self.observacion,
-            'num_mazo': self.num_mazo,
-            'codigo': self.codigo,
-            'potencial': self.potencial,
-            'peso': self.peso,
-            'codrefcabl': self.codrefcabl,
-            'codreftori': self.codreftori,
-            'codreftdes': self.codreftdes,
-            'num_solucion': self.num_solucion,
-            'seguridad': self.seguridad,
-            'etiqueta': self.etiqueta,
-            'etiqueta_pant': self.etiqueta_pant,
-            '_links': {
-                'self': url_for('wirelist_manager.get_wire', id=self.id)
-            }
+            "id": self.id,
+            "order": self.order,
+            "edicion": self.edicion,
+            "zona1": self.zona1,
+            "zona2": self.zona2,
+            "zona3": self.zona3,
+            "zona4": self.zona4,
+            "zona5": self.zona5,
+            "zona6": self.zona6,
+            "zona7": self.zona7,
+            "zona8": self.zona8,
+            "zona9": self.zona9,
+            "zona10": self.zona10,
+            "zona11": self.zona11,
+            "zona12": self.zona12,
+            "cable_num": self.cable_num,
+            "codig_pant": self.codig_pant,
+            "senal_pant": self.senal_pant,
+            "sub_pant": self.sub_pant,
+            "clase": self.clase,
+            "lugarpro": self.lugarpro,
+            "aparatopro": self.aparatopro,
+            "bornapro": self.bornapro,
+            "esquemapro": self.esquemapro,
+            "lugardes": self.lugardes,
+            "aparatodes": self.aparatodes,
+            "bornades": self.bornades,
+            "esquemades": self.esquemades,
+            "seccion": self.seccion,
+            "longitud": self.longitud,
+            "codigocabl": self.codigocabl,
+            "terminalor": self.terminalor,
+            "terminalde": self.terminalde,
+            "observacion": self.observacion,
+            "num_mazo": self.num_mazo,
+            "codigo": self.codigo,
+            "potencial": self.potencial,
+            "peso": self.peso,
+            "codrefcabl": self.codrefcabl,
+            "codreftori": self.codreftori,
+            "codreftdes": self.codreftdes,
+            "num_solucion": self.num_solucion,
+            "seguridad": self.seguridad,
+            "etiqueta": self.etiqueta,
+            "etiqueta_pant": self.etiqueta_pant,
+            "_links": {"self": url_for("wirelist_manager.get_wire", id=self.id)},
         }
         return data
-    
+
     def from_dict(self, data):
-        for field in ['order', 'edicion', 'zona1', 'zona2', 'zona3', 'zona4', 'zona5', 'zona6', 'zona7',
-                    'zona8', 'zona9', 'zona10', 'zona11', 'zona12', 'cable_num', 'codig_pant', 'senal_pant',
-                    'sub_pant', 'clase', 'lugarpro', 'aparatopro', 'bornapro', 'esquemapro', 'lugardes',
-                    'aparatodes', 'bornades', 'esquemades', 'seccion', 'longitud', 'codigocabl', 'terminalor',
-                    'terminalde', 'observacion', 'num_mazo', 'codigo', 'potencial', 'peso', 'codrefcabl',
-                    'codreftori', 'codreftdes', 'num_solucion', 'seguridad', 'etiqueta', 'etiqueta_pant']:
+        for field in [
+            "order",
+            "edicion",
+            "zona1",
+            "zona2",
+            "zona3",
+            "zona4",
+            "zona5",
+            "zona6",
+            "zona7",
+            "zona8",
+            "zona9",
+            "zona10",
+            "zona11",
+            "zona12",
+            "cable_num",
+            "codig_pant",
+            "senal_pant",
+            "sub_pant",
+            "clase",
+            "lugarpro",
+            "aparatopro",
+            "bornapro",
+            "esquemapro",
+            "lugardes",
+            "aparatodes",
+            "bornades",
+            "esquemades",
+            "seccion",
+            "longitud",
+            "codigocabl",
+            "terminalor",
+            "terminalde",
+            "observacion",
+            "num_mazo",
+            "codigo",
+            "potencial",
+            "peso",
+            "codrefcabl",
+            "codreftori",
+            "codreftdes",
+            "num_solucion",
+            "seguridad",
+            "etiqueta",
+            "etiqueta_pant",
+        ]:
             if field in data:
                 setattr(self, field, data[field])
+
+
+class Picture(PaginatedAPIMixin, db.Model):
+    __tablename__ = "picture"
+    id = db.Column(db.Integer, primary_key=True)
+    picture = db.Column(db.String(255), nullable=False)
+    sender_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    sended = db.Column(db.DateTime, default=datetime.utcnow)
+    description = db.Column(db.String(140), nullable=False)
+
+    def __repr__(self):
+        return "<Picture {}>".format(self.id)
+
+    def to_dict(self):
+        data = {
+            "id": self.id,
+            "picture": self.picture,
+            "description": self.description,
+            "sended": self.sended,
+            "_links": {
+                "self": url_for("picture_manager.get_picture", id=self.id),
+                "sender_id": url_for("auth_manager.get_user", id=self.sender_id),
+            },
+        }
+        return data
+
+    def from_dict(self, data):
+        for field in ["picture", "sender_id", "description"]:
+            if field in data:
+                setattr(self, field, data[field])
+
+
+class Note(PaginatedAPIMixin, db.Model):
+    __tablename__ = "note"
+    id = db.Column(db.Integer, primary_key=True)
+    note = db.Column(db.String(40), nullable=False)
+    sender_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    reference_id = db.Column(db.Integer, db.ForeignKey("wirelist.id"))
+    private = db.Column(db.Boolean, default=True)
+
+    def __repr__(self):
+        return "<Note {}>".format(self.id)
+
+    def to_dict(self):
+        pass
+
+    def from_dict(self, data):
+        pass
