@@ -41,8 +41,7 @@ def test_login(client, auth):
     assert client.post('/api/user/v1.0/login', json={'id': '1', 'password': 'test'}, headers=headers,).status_code == 200
     response = auth.login()
     assert response.json["status"] == 'created'
-    auth.set_access_token(response.json["access_token"])
-    auth.set_refresh_token(response.json["refresh_token"])
+    
 
 
 @pytest.mark.parametrize(('id', 'password', 'message'), (
@@ -55,10 +54,15 @@ def test_login_validate_input(auth, id, password, message):
 
 
 def test_logout(client, auth):
-    response = auth.login()
-            
-    auth.set_access_token(response.json["access_token"])
-    assert auth.logout(auth.get_access_token()).status_code == 200
+    auth.login()
+
+    response = auth.logout(auth.get_access_token())
+    assert response.status_code == 200
+    assert "revoked" in response.json["message"]
+    response = auth.logout(auth.get_refresh_token())
+    print(response.json)
+    assert response.status_code == 200
+    assert "revoked" in response.json["message"]
 
 
 def test_logged_in(client, auth):
@@ -66,9 +70,8 @@ def test_logged_in(client, auth):
     assert response.status_code == 200
     assert response.json["logged_in"] is not True
 
-    response = auth.login()
+    auth.login()
 
-    auth.set_access_token(response.json["access_token"])
     headers = {"Authorization": f"Bearer {auth.get_access_token()}"}
     response = client.get('/api/user/v1.0/logged_in', headers=headers)
     print(response.json)
@@ -77,8 +80,7 @@ def test_logged_in(client, auth):
 
 
 def test_admin_required(client, auth):
-    response = auth.login()
-    auth.set_access_token(response.json["access_token"])
+    auth.login()
     headers = {"Authorization": f"Bearer {auth.get_access_token()}"}
     response = client.get('api/user/v1.0/users', headers=headers)
     assert "Admins" in response.json["message"]
@@ -90,9 +92,8 @@ def test_get_users(app, client, auth):
         user = db.session.get(User, 1)
         user.admin = True
         db.session.commit()
-    response = auth.login()
+    auth.login()
 
-    auth.set_access_token(response.json["access_token"])
     headers = {"Authorization": f"Bearer {auth.get_access_token()}"}
     response = client.get('api/user/v1.0/users', headers=headers)
     print(response.json)
@@ -106,19 +107,16 @@ def test_get_users(app, client, auth):
 
 
 def test_get_user(client, auth):
-    response = auth.login()
-    auth.set_access_token(response.json["access_token"])
+    auth.login()
 
     headers = {"Authorization": f"Bearer {auth.get_access_token()}"}
     response = client.get('/api/user/v1.0/user?id=1', headers=headers)
     print(response.json)
-
     assert response.status_code == 200
 
     headers = {"Authorization": f"Bearer {auth.get_access_token()}", "content-type": "application/json"}
     response = client.get('/api/user/v1.0/user', json={'id':1}, headers=headers)
     print(response.json)
-
     assert response.status_code == 200
 
     headers = {"Authorization": f"Bearer {auth.get_access_token()}"}
@@ -133,8 +131,7 @@ def test_get_user(client, auth):
     (1, 'Test', 'igor@example.com', True, 200)
 ))
 def test_user_admin(client, auth, id, username, email, fileupload, message):
-    response = auth.login()
-    auth.set_access_token(response.json["access_token"])
+    auth.login()
     headers = {"Authorization": f"Bearer {auth.get_access_token()}", "content-type": "application/json"}
     data = {'id': id, 'username': username, 'email': email, 'fileupload': fileupload}
     response = client.patch('/api/user/v1.0/user', json=data, headers=headers)
@@ -142,8 +139,7 @@ def test_user_admin(client, auth, id, username, email, fileupload, message):
 
 
 def test_search_user(client, auth):
-    response = auth.login()
-    auth.set_access_token(response.json["access_token"])
+    auth.login()
     headers = {"Authorization": f"Bearer {auth.get_access_token()}"}
     api_url = '/api/user/v1.0/search_user?id=1'
     response = client.get(api_url, headers=headers)
@@ -171,8 +167,7 @@ def test_search_user(client, auth):
 
 
 def test_new_password(client, auth):
-    response = auth.login()
-    auth.set_access_token(response.json["access_token"])
+    auth.login()
     headers = {"Authorization": f"Bearer {auth.get_access_token()}", "content-type": "application/json"}
     data = {'old_password': "test2", 'new_password': "test"}
     response = client.patch('/api/user/v1.0/new_password', json=data, headers=headers)

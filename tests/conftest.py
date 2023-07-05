@@ -46,13 +46,29 @@ class AuthActions(object):
 
     def get_refresh_token(self):
         return self._refresh_token
+    
+    def get(self, url, json=None, data=None, headers=None):
+        pass
+
+    def post(self, url, json=None, data=None, headers=None):
+        pass
+
+    def patch(self, url, json=None, data=None, headers=None):
+        pass
+
+    def delete(self, url, json=None, data=None, headers=None):
+        pass
 
     def login(self, id='1', password='test'):
         headers = {"content-type": "application/json"}
-        return self._client.post(
+        response = self._client.post(
             "/api/user/v1.0/login",
             json={'id': id, 'password': password}, headers=headers,
         )
+        if response.status_code==200:
+            self.set_access_token(response.json["access_token"])
+            self.set_refresh_token(response.json["refresh_token"])
+        return response
     
     def logout(self, token):
         headers = {"Authorization": f"Bearer {token}"}
