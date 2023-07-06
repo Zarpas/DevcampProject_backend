@@ -99,7 +99,7 @@ class User(PaginatedAPIMixin, db.Model):
         return task
 
     def get_tasks_in_progress(self):
-        return Task.query.filter_by(user=self, complete=False).all()
+        return Task.query.filter_by(user=self, complete=False)
 
     def get_task_in_progress(self, name):
         return Task.query.filter_by(name=name, user_id=self.id, complete=False).first()

@@ -90,6 +90,8 @@ def get_file():
     if request.is_json:
         if "id" in request.json:
             id = request.json.get("id", None)
+        else:
+            return bad_request("You need to identify the file.")
     elif "id" in request.args:
         id = request.args.get("id", None)
     else:
@@ -103,6 +105,8 @@ def delete_file():
     if request.is_json:
         if "id" in request.json:
             id = request.json.get("id", None)
+        else:
+            return bad_request("You need to identify the file.")
     elif "id" in request.args:
         id = request.args.get("id", None)
     else:

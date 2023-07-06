@@ -45,6 +45,9 @@ def create_app(config_class=config.DevelopmentConfiguration):
     from core.task_manager import bp as task_mngr_blueprint
     app.register_blueprint(task_mngr_blueprint, url_prefix="/api/task/v1.0")
 
+    from core.notification_manager import bp as notification_mngr_blueprint
+    app.register_blueprint(notification_mngr_blueprint, url_prefix='/api/notification/v1.0')
+
     from core.message_manager import bp as message_mngr_blueprint
     app.register_blueprint(message_mngr_blueprint, url_prefix="/api/message/v1.0")
 

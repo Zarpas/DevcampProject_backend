@@ -34,6 +34,8 @@ def runner(app):
 class AuthActions(object):
     def __init__(self, client):
         self._client = client
+        self._access_token = None
+        self._refresh_token = None
 
     def set_access_token(self, token):
         self._access_token = token
@@ -48,16 +50,45 @@ class AuthActions(object):
         return self._refresh_token
     
     def get(self, url, json=None, data=None, headers=None):
-        pass
+        if headers is None and self._access_token is not None:
+            if json is not None:
+                headers = {"content-type": "application/json", "Authorization": f"Bearer {self.get_access_token()}"}
+            else:
+                headers = {"Authorization": f"Bearer {self.get_access_token()}"}
 
-    def post(self, url, json=None, data=None, headers=None):
-        pass
+        response = self._client.get(url, json=json, data=data, headers=headers)
+        return response
+
+    def post(self, url, json=None, data=None, headers=None,):
+        if headers is None and self._access_token is not None:
+            if json is not None:
+                headers = {"content-type": "application/json", "Authorization": f"Bearer {self.get_access_token()}"}
+            else:
+                headers = {"Authorization": f"Bearer {self.get_access_token()}"}
+
+        response = self._client.post(url, json=json, data=data, headers=headers)
+        return response
+        
 
     def patch(self, url, json=None, data=None, headers=None):
-        pass
+        if headers is None and self._access_token is not None:
+            if json is not None:
+                headers = {"content-type": "application/json", "Authorization": f"Bearer {self.get_access_token()}"}
+            else:
+                headers = {"Authorization": f"Bearer {self.get_access_token()}"}
+
+        response = self._client.patch(url, json=json, data=data, headers=headers)
+        return response
 
     def delete(self, url, json=None, data=None, headers=None):
-        pass
+        if headers is None and self._access_token is not None:
+            if json is not None:
+                headers = {"content-type": "application/json", "Authorization": f"Bearer {self.get_access_token()}"}
+            else:
+                headers = {"Authorization": f"Bearer {self.get_access_token()}"}
+
+        response = self._client.delete(url, json=json, data=data, headers=headers)
+        return response
 
     def login(self, id='1', password='test'):
         headers = {"content-type": "application/json"}

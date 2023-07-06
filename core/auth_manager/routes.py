@@ -84,6 +84,8 @@ def get_user():
     if request.is_json:
         if "id" in request.json:
             id = request.json.get("id", None)
+        else:
+            return bad_request("You need to identify the user.")
     elif "id" in request.args:
         id = request.args.get("id", None)
     else:
@@ -271,11 +273,11 @@ def add_claims_to_access_token(identity):
 ######################################################
 
 
-# @bp.route("/protected", methods=["GET"])
-# @jwt_required()
-# def protected():
-#     current_user = get_jwt_identity()
-#     return jsonify(logged_in_as=current_user), 200
+@bp.route("/protected", methods=["GET"])
+@jwt_required()
+def protected():
+    current_user = get_jwt_identity()
+    return jsonify(logged_in_as=current_user), 200
 
 
 @bp.route("/who_am_i", methods=["GET"])
@@ -288,11 +290,11 @@ def protected_who_am_i():
     )
 
 
-# @bp.route("/protected_claims", methods=["GET"])
-# @jwt_required()
-# def protected_claims():
-#     claims = get_jwt()
-#     return jsonify(claims=claims)
+@bp.route("/protected_claims", methods=["GET"])
+@jwt_required()
+def protected_claims():
+    claims = get_jwt()
+    return jsonify(claims=claims)
 
 
 @bp.route("/optionally_protected", methods=["GET"])
@@ -305,7 +307,7 @@ def optionally_protected():
         return jsonify(logged_in_as="anonymous user")
 
 
-# @bp.route("/protected_admin", methods=["GET"])
-# @admin_required()
-# def protected_admin():
-#     return jsonify(foo="bar")
+@bp.route("/protected_admin", methods=["GET"])
+@admin_required()
+def protected_admin():
+    return jsonify(foo="bar")

@@ -55,3 +55,4 @@ class TestConfiguration(Config):
     TESTING = True
     DB_SERVER = 'localhost'
     SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(basedir, "tests/database.sqlite")
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(seconds=10)

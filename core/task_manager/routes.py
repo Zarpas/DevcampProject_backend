@@ -11,7 +11,7 @@ from core.task_manager import bp
 from core.models import User, Task
 from core.errors import bad_request
 
-def tasks_manager_required():
+def task_manager_required():
     def wrapper(fn):
         @wraps(fn)
         def decorator(*args, **kwargs):
@@ -27,11 +27,13 @@ def tasks_manager_required():
     return wrapper
 
 @bp.route("/task", methods=['GET'])
-@tasks_manager_required()
+@task_manager_required()
 def get_task():
     if request.is_json:
         if "id" in request.json:
             id = request.json.get("id", None)
+        else:
+            return bad_request("You need to identify the task.")
     elif "id" in request.args:
         id = request.args.get("id", None)
     else:
@@ -41,7 +43,7 @@ def get_task():
 
 
 @bp.route("/task", methods=["POST"])
-@tasks_manager_required()
+@task_manager_required()
 def new_task():
     id = get_jwt_identity()
     user = User.query.get(id)
@@ -49,11 +51,11 @@ def new_task():
     description = request.json.get("description", "")
     filename = request.json.get("filename", None)
     if task is None:
-        return jsonify({"message": "No task especified"})
+        return bad_request("No task especified")
     if filename is None:
-        return jsonify({"message": "File not especified"})
-    if user.get_task_in_progress("example"):
-        return jsonify({"message": "A task is currently in progress"})
+        return bad_request("File not especified")
+    if user.get_task_in_progress(task):
+        return bad_request("A {} task is currently in progress".format(task))
     else:
         user.launch_task(task, description, filename)
         db.session.commit()
@@ -61,13 +63,23 @@ def new_task():
 
 
 @bp.route("/tasks", methods=["GET"])
-@tasks_manager_required()
+@task_manager_required()
 def get_task_list():
+    id = get_jwt_identity()
+    user = User.query.get(id)
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 10, type=int)
+    active = request.args.get("active", False, type=bool)
 
-    data = Task.to_collection_dict(
-        Task.query, page, per_page, "task_manager.get_task_list"
+    if active is True:
+        data = Task.to_collection_dict(
+        user.get_tasks_in_progress(), page, per_page, "task_manager.get_task_list"
+    )
+    else:
+        data = Task.to_collection_dict(
+        Task.query.filter_by(user=user), page, per_page, "task_manager.get_task_list"
     )
 
     return jsonify(data)
+
+

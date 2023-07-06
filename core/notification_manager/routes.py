@@ -24,7 +24,7 @@ from core.models import User
 from core.errors import bad_request
 
 from core.notification_manager import bp
-from models import Notification
+from core.models import Notification
 
 @bp.route('/notification', methods=['GET'])
 def get_notification():
