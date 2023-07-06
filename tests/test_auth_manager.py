@@ -1,4 +1,5 @@
 import pytest
+import time
 
 from core import db
 from core.models import User
@@ -72,56 +73,58 @@ def test_logged_in(client, auth):
 
     auth.login()
 
-    headers = {"Authorization": f"Bearer {auth.get_access_token()}"}
-    response = client.get('/api/user/v1.0/logged_in', headers=headers)
+    response = auth.get('/api/user/v1.0/logged_in')
     print(response.json)
     assert response.status_code == 200
     assert response.json["logged_in"] is True
 
 
-def test_admin_required(client, auth):
+def test_admin_required(auth):
     auth.login()
-    headers = {"Authorization": f"Bearer {auth.get_access_token()}"}
-    response = client.get('api/user/v1.0/users', headers=headers)
+    
+    response = auth.get('api/user/v1.0/users')
     assert "Admins" in response.json["message"]
     assert response.status_code == 403
 
 
-def test_get_users(app, client, auth):
+def test_get_users(app, auth):
     with app.app_context():
         user = db.session.get(User, 1)
         user.admin = True
+        user.listoperate = True
+        user.takepicture = True
         db.session.commit()
     auth.login()
 
-    headers = {"Authorization": f"Bearer {auth.get_access_token()}"}
-    response = client.get('api/user/v1.0/users', headers=headers)
+    response = auth.get('api/user/v1.0/users')
     print(response.json)
     assert response.status_code == 200
     assert response.json["_meta"]["per_page"] == 10
 
-    response = client.get('api/user/v1.0/users?per_page=2', headers=headers)
+    response = auth.get('api/user/v1.0/users?per_page=2')
     print(response.json)
     assert response.status_code == 200
     assert response.json["_meta"]["per_page"] == 2
 
 
-def test_get_user(client, auth):
+def test_get_user(auth):
     auth.login()
 
-    headers = {"Authorization": f"Bearer {auth.get_access_token()}"}
-    response = client.get('/api/user/v1.0/user?id=1', headers=headers)
+    response = auth.get('/api/user/v1.0/user?id=1')
     print(response.json)
     assert response.status_code == 200
 
-    headers = {"Authorization": f"Bearer {auth.get_access_token()}", "content-type": "application/json"}
-    response = client.get('/api/user/v1.0/user', json={'id':1}, headers=headers)
+    response = auth.get('/api/user/v1.0/user', json={'id':1})
     print(response.json)
     assert response.status_code == 200
 
-    headers = {"Authorization": f"Bearer {auth.get_access_token()}"}
-    response = client.get('/api/user/v1.0/user', headers=headers)
+    response = auth.get('/api/user/v1.0/user')
     print(response.json)
+    assert "identify" in response.json['message']
+
+    response = auth.get('/api/user/v1.0/user', json={'name':1})
+    print(response.json)
+    print(response.status_code)
     assert "identify" in response.json['message']
 
 
@@ -130,54 +133,146 @@ def test_get_user(client, auth):
     (1, 'Test', 'igor2@example.com', False, 400),
     (1, 'Test', 'igor@example.com', True, 200)
 ))
-def test_user_admin(client, auth, id, username, email, fileupload, message):
+def test_user_admin(auth, id, username, email, fileupload, message):
     auth.login()
-    headers = {"Authorization": f"Bearer {auth.get_access_token()}", "content-type": "application/json"}
     data = {'id': id, 'username': username, 'email': email, 'fileupload': fileupload}
-    response = client.patch('/api/user/v1.0/user', json=data, headers=headers)
+    response = auth.patch('/api/user/v1.0/user', json=data)
     assert response.status_code == message
 
 
-def test_search_user(client, auth):
+def test_search_user(auth):
     auth.login()
-    headers = {"Authorization": f"Bearer {auth.get_access_token()}"}
     api_url = '/api/user/v1.0/search_user?id=1'
-    response = client.get(api_url, headers=headers)
+    response = auth.get(api_url)
     print(response.json)
     print(response.status_code)
     assert response.json['items'][0]['username'] == 'Test'
     
     api_url = '/api/user/v1.0/search_user?username=Te'
-    response = client.get(api_url, headers=headers)
+    response = auth.get(api_url)
     print(response.json)
     print(response.status_code)
     assert response.json['items'][0]['username'] == 'Test'
 
     api_url = '/api/user/v1.0/search_user?surnames=Te'
-    response = client.get(api_url, headers=headers)
+    response = auth.get(api_url)
     print(response.json)
     print(response.status_code)
     assert response.json['items'][0]['username'] == 'Test'
 
     api_url = '/api/user/v1.0/search_user'
-    response = client.get(api_url, headers=headers)
+    response = auth.get(api_url)
     print(response.json)
     print(response.status_code)
     assert "no data" in response.json['message']
 
 
-def test_new_password(client, auth):
+def test_new_password(auth):
     auth.login()
-    headers = {"Authorization": f"Bearer {auth.get_access_token()}", "content-type": "application/json"}
     data = {'old_password': "test2", 'new_password': "test"}
-    response = client.patch('/api/user/v1.0/new_password', json=data, headers=headers)
+    response = auth.patch('/api/user/v1.0/new_password', json=data)
     print(response.json)
     assert "Wrong" in response.json["message"]
 
     data = {'old_password': "test", 'new_password': "test"}
-    response = client.patch('/api/user/v1.0/new_password', json=data, headers=headers)
+    response = auth.patch('/api/user/v1.0/new_password', json=data)
     print(response.json)
     assert response.status_code == 200
     
 
+def test_refresh(auth):
+    auth.login()
+    headers = {"Authorization": f"Bearer {auth.get_refresh_token()}"}
+    response = auth.post('/api/user/v1.0/refresh', headers=headers)
+    assert response.json["access_token"] 
+    assert response.json["refresh_token"] 
+    assert response.status_code == 200
+
+
+def test_protected(client, auth):
+    api_url = '/api/user/v1.0/protected'
+    response = client.get(api_url)
+    print(response.status_code)
+    print(response.json)
+    assert response.status_code == 401
+    assert "Missing" in response.json["msg"]
+
+    auth.login()
+    response = auth.get('/api/user/v1.0/protected')
+    print(response.status_code)
+    print(response.json)
+    assert response.status_code == 200
+
+
+def test_who_am_i(auth):
+    api_url = '/api/user/v1.0/who_am_i'
+    response = auth.get(api_url)
+    print(response.status_code)
+    print(response.json)
+    assert response.status_code == 401
+    assert "Missing" in response.json["msg"]
+
+    auth.login()
+    response = auth.get(api_url)
+    print(response.status_code)
+    print(response.json)
+    assert response.status_code == 200
+
+
+def test_protected_claims(auth):
+    api_url = '/api/user/v1.0/protected_claims'
+    response = auth.get(api_url)
+    print(response.status_code)
+    print(response.json)
+    assert response.status_code == 401
+    assert "Missing" in response.json["msg"]
+
+    auth.login()
+    response = auth.get(api_url)
+    print(response.status_code)
+    print(response.json)
+    assert response.status_code == 200
+
+
+def test_optionally_protected(auth):
+    api_url = '/api/user/v1.0/optionally_protected'
+    response = auth.get(api_url)
+    print(response.status_code)
+    print(response.json)
+    assert "user" in response.json["logged_in_as"]
+    assert response.status_code == 200
     
+    auth.login()
+    response = auth.get(api_url)
+    print(response.status_code)
+    print(response.json)
+    assert response.status_code == 200
+    assert response.json["logged_in_as"] == 1
+
+
+def test_protected_admin(auth):
+    api_url = '/api/user/v1.0/protected_admin'
+    response = auth.get(api_url)
+    print(response.status_code)
+    print(response.json)
+    assert response.status_code == 401
+    assert "Missing" in response.json["msg"]
+    
+    auth.login()
+    response = auth.get(api_url)
+    print(response.status_code)
+    print(response.json)
+    assert response.status_code == 200
+    assert "bar" in response.json["foo"]
+
+def test_expired_token(auth):
+    auth.login()
+
+    time.sleep(11)
+
+    api_url = '/api/user/v1.0/who_am_i'
+    response = auth.get(api_url)
+    print(response.status_code)
+    print(response.json)
+    assert response.status_code == 401
+    assert "expired" in response.json["message"]

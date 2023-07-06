@@ -27,23 +27,39 @@ from core.notification_manager import bp
 from core.models import Notification
 
 @bp.route('/notification', methods=['GET'])
+@jwt_required(optional=True)
 def get_notification():
-    if request.is_json:
-        if "id" in request.json:
-            id = request.json.get("id", None)
-    elif "id" in request.args:
-        id = request.args.get("id", None)
-    else:
-        return bad_request("You need to identify the notification.")
+    user_id = get_jwt_identity()
+    if user_id:
+        if request.is_json and "id" in request.json:
+                id = request.json.get("id", None)
+        elif "id" in request.args:
+            id = request.args.get("id", None)
+        else:
+            return bad_request("You need to identify the notification.")
+        
+        user = User.query.get(user_id)
 
-    return jsonify(Notification.query.get_or_404(id).to_dict())
+        return jsonify(Notification.query.get_or_404(id).to_dict())
+    else:
+        return bad_request("Registered users only.")
 
 @bp.route('/notifications', methods=['GET'])
+@jwt_required(optional=True)
 def get_notification_list():
-    page = request.args.get("page", 1, type=int)
-    per_page = request.args.get("per_page", 10, type=int)
+    id = get_jwt_identity()
 
-    data = Notification.to_collection_dict(Notification.query, page, per_page, "notification_manager.get_notification_list")
+    if id:
+        page = request.args.get("page", 1, type=int)
+        per_page = request.args.get("per_page", 10, type=int)
 
-    return jsonify(data)
+        user = User.query.get(id)
+
+        data = Notification.to_collection_dict(
+            Notification.query.filter_by(user=user), page, per_page, 
+            "notification_manager.get_notification_list")
+
+        return jsonify(data)
+    else:
+        return bad_request("Registered users only.")
 

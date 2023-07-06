@@ -256,7 +256,7 @@ class Message(PaginatedAPIMixin, db.Model):
             "timestamp": self.timestamp.isoformat() + "Z",
             "readed": self.readed,
             "_links": {
-                "self": url_for("message.get_message", id=self.id),
+                "self": url_for("message_manager.get_message", id=self.id),
                 "sender": url_for("auth_manager.get_user", id=self.sender_id),
                 "recipient": url_for("auth_manager.get_user", id=self.recipient_id),
             },
@@ -274,7 +274,7 @@ class Notification(PaginatedAPIMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), index=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
-    timestamp = db.Column(db.Float, index=True, default=time)
+    timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
     payload_json = db.Column(db.Text)
     readed = db.Column(db.Boolean)
 

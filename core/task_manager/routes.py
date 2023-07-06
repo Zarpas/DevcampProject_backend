@@ -29,11 +29,8 @@ def task_manager_required():
 @bp.route("/task", methods=['GET'])
 @task_manager_required()
 def get_task():
-    if request.is_json:
-        if "id" in request.json:
+    if request.is_json and "id" in request.json:
             id = request.json.get("id", None)
-        else:
-            return bad_request("You need to identify the task.")
     elif "id" in request.args:
         id = request.args.get("id", None)
     else:

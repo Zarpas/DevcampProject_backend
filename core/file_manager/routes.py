@@ -87,11 +87,8 @@ def get_file_list():
 @bp.route("/file", methods=["GET"])
 @file_upload_required()
 def get_file():
-    if request.is_json:
-        if "id" in request.json:
+    if request.is_json and "id" in request.json:
             id = request.json.get("id", None)
-        else:
-            return bad_request("You need to identify the file.")
     elif "id" in request.args:
         id = request.args.get("id", None)
     else:
@@ -102,11 +99,8 @@ def get_file():
 @bp.route("/file", methods=["DELETE"])
 @file_upload_required()
 def delete_file():
-    if request.is_json:
-        if "id" in request.json:
+    if request.is_json and "id" in request.json:
             id = request.json.get("id", None)
-        else:
-            return bad_request("You need to identify the file.")
     elif "id" in request.args:
         id = request.args.get("id", None)
     else:

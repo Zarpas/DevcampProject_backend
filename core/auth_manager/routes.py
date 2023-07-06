@@ -81,11 +81,8 @@ def register():
 @bp.route("/user", methods=["GET"])
 @admin_required()
 def get_user():
-    if request.is_json:
-        if "id" in request.json:
+    if request.is_json and "id" in request.json:
             id = request.json.get("id", None)
-        else:
-            return bad_request("You need to identify the user.")
     elif "id" in request.args:
         id = request.args.get("id", None)
     else:
