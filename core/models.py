@@ -325,7 +325,7 @@ class CodeList(PaginatedAPIMixin, db.Model):
             "edition": self.edition,
             "revision": self.revision,
             "project": self.project,
-            "_links": {"self": url_for("codelist.get_codelist", id=self.id)},
+            "_links": {"self": url_for("codelist_manager.get_codelist", id=self.id)},
         }
         return data
 

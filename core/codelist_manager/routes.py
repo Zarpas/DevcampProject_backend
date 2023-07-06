@@ -22,7 +22,7 @@ def listoperate_required():
             if claims["listoperate"]:
                 return fn(*args, **kwargs)
             else:
-                return jsonify(message="List Operators Only!")
+                return jsonify(message="List Operators Only!"), 403
         return decorator
     return wrapper
 
@@ -50,9 +50,8 @@ def new_codelist():
 
 @bp.route('/codelist', methods=['GET'])
 def get_codelist():
-    if request.is_json:
-        if "id" in request.json:
-            id = request.json.get("id", None)
+    if request.is_json and "id" in request.json:
+        id = request.json.get("id", None)
     elif "id" in request.args:
         id = request.args.get("id", None)
     else:
@@ -70,14 +69,15 @@ def get_codelist_list():
 
 
 
-@bp.route('/delete_codelist', methods=['DELETE'])
+@bp.route('/codelist', methods=['DELETE'])
 @listoperate_required()
 def delete_codelist():
-    if request.is_json:
-        if "id" in request.json:
-            id = request.json.get("id", None)
+    if request.is_json and "id" in request.json:
+        id = request.json.get("id", None)
     elif "id" in request.args:
         id = request.args.get("id", None)
+    else:
+        return bad_request("You need to identify the message.")
 
     codelist = CodeList.query.get(id)
 

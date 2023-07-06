@@ -40,15 +40,11 @@ def test_new_task(auth):
     assert response.status_code == 200
     assert "launched" in response.json["message"]
 
-    time.sleep(3)
-
     response = auth.post(api_url, json={"task": "example", "description": "test task", "filename": "6"})
     print(response.status_code)
     print(response.json)
     assert response.status_code == 400
     assert "currently in progress" in response.json["message"]
-
-    time.sleep(7)
 
 
 def test_get_task_list(app, auth):
