@@ -17,6 +17,10 @@ from core.codelist_manager.routes import listoperate_required
 @listoperate_required()
 def new_wire():
     data = request.get_json() or {}
+
+    if "owner_id" not in data:
+        return bad_request("Must include owner_id.")
+
     wire = WireList()
     wire.from_dict(data, new_wire=True, owner=data["owner_id"])
     db.session.add(wire)
@@ -54,6 +58,10 @@ def get_wire_list():
 def update_wire():
     # need to add some kind of check before commit
     data = request.get_json() or {}
+
+    if "id" not in data:
+        return bad_request("You need to identify the wire.")
+
     wire = WireList.query.get(data["id"])
 
     wire.from_dict(data)
@@ -69,6 +77,8 @@ def delete_wire():
         id = request.json.get("id", None)
     elif "id" in request.args:
         id = request.args.get("id", None)
+    else:
+        return bad_request("You need to identify the wire.")
     
     wire = WireList.query.get(id)
 
@@ -79,5 +89,4 @@ def delete_wire():
     db.session.delete(wire)
     db.session.commit()
     response["message"] = "Wire deleted"
-    response.status_code = 200
     return response
