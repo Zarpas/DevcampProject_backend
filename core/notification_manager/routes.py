@@ -38,7 +38,7 @@ def get_notification():
         else:
             return bad_request("You need to identify the notification.")
         
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
 
         return jsonify(Notification.query.get_or_404(id).to_dict())
     else:
@@ -53,7 +53,7 @@ def get_notification_list():
         page = request.args.get("page", 1, type=int)
         per_page = request.args.get("per_page", 10, type=int)
 
-        user = User.query.get(id)
+        user = db.session.get(User, id)
 
         data = Notification.to_collection_dict(
             Notification.query.filter_by(user=user), page, per_page, 

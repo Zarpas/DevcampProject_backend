@@ -37,7 +37,7 @@ def test_new_task(auth):
     response = auth.post(api_url, json={"task": "example", "description": "test task", "filename": "6"})
     print(response.status_code)
     print(response.json)
-    assert response.status_code == 200
+    assert response.status_code == 202
     assert "launched" in response.json["message"]
 
     response = auth.post(api_url, json={"task": "example", "description": "test task", "filename": "6"})

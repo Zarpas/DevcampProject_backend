@@ -6,7 +6,7 @@ from core.models import User
 
 def test_get_notification_list(app, auth):
     with app.app_context():
-        user = User.query.get(1)
+        user = db.session.get(User, 1)
         user.add_notification("example", data={"status": "complete"})
         db.session.commit()
     

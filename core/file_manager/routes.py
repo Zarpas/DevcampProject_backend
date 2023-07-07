@@ -52,7 +52,7 @@ def post_file():
         return bad_request("No selected file")
 
     id = get_jwt_identity()
-    user = User.query.get(id)
+    user = db.session.get(User, id)
 
     if filename and allowed_file(filename.filename):
         # todo: check if the file already exists.
@@ -106,7 +106,7 @@ def delete_file():
     else:
         return bad_request("You need to identify the file.")
     
-    file = File.query.get(id)
+    file = db.session.get(File, id)
 
     if file is None:
         return bad_request("file not found")

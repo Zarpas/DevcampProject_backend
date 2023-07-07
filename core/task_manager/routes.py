@@ -29,6 +29,8 @@ def task_manager_required():
 @bp.route("/task", methods=['GET'])
 @task_manager_required()
 def get_task():
+
+    # need to refactor to use de get_task from user in same way as get_task_list
     if request.is_json and "id" in request.json:
             id = request.json.get("id", None)
     elif "id" in request.args:
@@ -43,7 +45,7 @@ def get_task():
 @task_manager_required()
 def new_task():
     id = get_jwt_identity()
-    user = User.query.get(id)
+    user = db.session.get(User, id)
     task = request.json.get("task", None)
     description = request.json.get("description", "")
     filename = request.json.get("filename", None)
@@ -56,14 +58,14 @@ def new_task():
     else:
         user.launch_task(task, description, filename)
         db.session.commit()
-    return jsonify({"message": "task launched"})
+    return jsonify({"message": "task launched"}), 202
 
 
 @bp.route("/tasks", methods=["GET"])
 @task_manager_required()
 def get_task_list():
     id = get_jwt_identity()
-    user = User.query.get(id)
+    user = db.session.get(User, id)
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 10, type=int)
     active = request.args.get("active", False, type=bool)

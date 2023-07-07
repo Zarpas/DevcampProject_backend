@@ -55,7 +55,7 @@ def get_message():
 @jwt_required()
 def get_message_list():
     id = get_jwt_identity()
-    user = User.query.get(id)
+    user = db.session.get(User, id)
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 10, type=int)
     sent = request.args.get("sent", False, type=bool)
@@ -82,7 +82,7 @@ def delete_message():
     else:
         return bad_request("You need to identify the message.")
 
-    message = Message.query.get(id)
+    message = db.session.get(Message, id)
     if message is None:
         return bad_request('Message not found.')
     

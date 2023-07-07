@@ -79,7 +79,7 @@ def delete_codelist():
     else:
         return bad_request("You need to identify the message.")
 
-    codelist = CodeList.query.get(id)
+    codelist = db.session.get(CodeList, id)
 
     if codelist is None:
         return bad_request('List not found.')

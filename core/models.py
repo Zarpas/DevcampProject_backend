@@ -247,7 +247,7 @@ class Message(PaginatedAPIMixin, db.Model):
     readed = db.Column(db.Boolean)
 
     def __repr__(self):
-        return "<Message {}>".format(self.body)
+        return "<Message {}>".format(self.id)
 
     def to_dict(self):
         data = {
@@ -333,6 +333,12 @@ class CodeList(PaginatedAPIMixin, db.Model):
         for field in ["list_code", "description", "edition", "revision", "project"]:
             if field in data:
                 setattr(self, field, data[field])
+
+    def add_wirelist(self, data):
+        n = WireList()
+        n.from_dict()
+        db.session.add(n)
+        return n
 
 
 class WireList(PaginatedAPIMixin, db.Model):
@@ -437,11 +443,14 @@ class WireList(PaginatedAPIMixin, db.Model):
             "seguridad": self.seguridad,
             "etiqueta": self.etiqueta,
             "etiqueta_pant": self.etiqueta_pant,
-            "_links": {"self": url_for("wirelist_manager.get_wire", id=self.id)},
+            "_links": {
+                "self": url_for("wirelist_manager.get_wire", id=self.id),
+                "owner": url_for("codelist_manager.get_codelist", id=self.owner_id)
+                },
         }
         return data
 
-    def from_dict(self, data):
+    def from_dict(self, data, new_wire=False, owner=None):
         for field in [
             "order",
             "edicion",
@@ -490,6 +499,8 @@ class WireList(PaginatedAPIMixin, db.Model):
         ]:
             if field in data:
                 setattr(self, field, data[field])
+        if new_wire and owner is not None:
+            self.owner_id = owner
 
 
 class Picture(PaginatedAPIMixin, db.Model):

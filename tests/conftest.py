@@ -8,6 +8,12 @@ from core import db
 from core.models import User
 from flask_migrate import init, migrate, upgrade
 
+def pytest_configure(config):
+    try:
+        os.remove(os.path.join(os.path.abspath(os.path.dirname(__file__)), "database.sqlite"))
+    except Exception as e:
+        print(e)
+
 
 @pytest.fixture(scope="session")
 def app():

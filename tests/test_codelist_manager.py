@@ -172,3 +172,5 @@ def test_delete_codelist(auth):
     assert response.status_code == 400
     assert "not found" in response.json["message"]
 
+    response = auth.post(api_url, json={'list_code': 'CA.1.00.000', 'description': 'test code', 'edition': '-', 'revision': '0', 'project': '2825'})
+
