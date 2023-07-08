@@ -514,6 +514,7 @@ class Picture(PaginatedAPIMixin, db.Model):
     reference_id = db.Column(db.Integer, db.ForeignKey("codelist.id"))
     sended = db.Column(db.DateTime, default=datetime.utcnow)
     description = db.Column(db.String(140), nullable=False)
+    private = db.Column(db.Boolean, default=False)
 
     def __repr__(self):
         return "<Picture {}>".format(self.id)
@@ -524,17 +525,22 @@ class Picture(PaginatedAPIMixin, db.Model):
             "picture": self.picture,
             "description": self.description,
             "sended": self.sended,
+            "private": self.private,
             "_links": {
                 "self": url_for("picture_manager.get_picture", id=self.id),
-                "sender_id": url_for("auth_manager.get_user", id=self.sender_id),
+                "sender": url_for("auth_manager.get_user", id=self.sender_id),
+                "reference": url_for("codelist_manager.get_codelist", id=self.reference_id)
             },
         }
         return data
 
-    def from_dict(self, data):
-        for field in ["picture", "sender_id", "description"]:
-            if field in data:
-                setattr(self, field, data[field])
+    def from_dict(self, data, new_picture=False):
+        if new_picture:
+            for field in ["reference_id", "sender_id", "picture"]:
+                if field in data:
+                    setattr(self, field, data[field])
+        if "description" in data:
+            self.description = data["description"]
 
 
 class Note(PaginatedAPIMixin, db.Model):
@@ -543,7 +549,7 @@ class Note(PaginatedAPIMixin, db.Model):
     note = db.Column(db.String(40), nullable=False)
     sender_id = db.Column(db.Integer, db.ForeignKey("user.id"))
     reference_id = db.Column(db.Integer, db.ForeignKey("wirelist.id"))
-    private = db.Column(db.Boolean, default=True)
+    private = db.Column(db.Boolean, default=False)
 
     def __repr__(self):
         return "<Note {}>".format(self.id)

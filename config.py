@@ -26,6 +26,9 @@ class Config(object):
     ALLOWED_EXTENSIONS = {"csv", "xls", "xlsx", "ods"}
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024
 
+    UPLOAD_PICTURE_FOLDER = os.path.join(basedir, "core/static/pictures")
+    ALLOWED_PICTURE_EXTENSIONS = {'jpg', 'png'}
+
     MAIL_SERVER = os.environ.get("MAIL_SERVER")
     MAIL_PORT = int(os.environ.get("MAIL_PORT") or 25)
     MAIL_USE_TLS = os.environ.get("MAIL_USE_TLS") is not None
