@@ -93,6 +93,9 @@ def test_get_users(app, auth):
         user.admin = True
         user.listoperate = True
         user.takepicture = True
+        # db.session.commit()
+        user2 = db.session.get(User, 2)
+        user2.writenote = False
         db.session.commit()
     auth.login()
 

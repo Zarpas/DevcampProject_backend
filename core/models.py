@@ -556,13 +556,13 @@ class Note(PaginatedAPIMixin, db.Model):
             "_links": {
                 "self": url_for("note_manager.get_note", id=self.id),
                 "sender": url_for("auth_manager.get_user", id=self.sender_id),
-                "reference": url_for("writelist_manager.get_wire", id=self.reference_id)
+                "reference": url_for("wirelist_manager.get_wire", id=self.reference_id)
             }
         }
         return data
 
     def from_dict(self, data, new_note=False):
-        if new_note is False:
+        if new_note is True:
             for field in ["sender_id", "reference_id"]:
                 if field in data:
                     setattr(self, field, data[field])

@@ -30,10 +30,10 @@ def writenote_required():
 @bp.route('/note', methods=['POST'])
 @writenote_required()
 def new_note():
-    data = request.json() or {}
+    data = request.get_json() or {}
     sender_id = get_jwt_identity()
     if (
-        "body" not in data
+        "note" not in data
         or "reference_id" not in data
         or "private" not in data
     ):
@@ -55,7 +55,7 @@ def get_note():
     if request.is_json and "id" in request.json:
         id = request.json.get("id", None)
     elif "id" in request.args:
-        id = request.args("id", None)
+        id = request.args.get("id", None)
     else:
         return bad_request("You need to identify the note.")
 
@@ -68,7 +68,7 @@ def get_note_list():
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 10, type=int)
 
-    data = Note.to_collection_dict(Note.query, page, per_page, "note_manager.ger_note_list")
+    data = Note.to_collection_dict(Note.query, page, per_page, "note_manager.get_note_list")
 
     return jsonify(data)
 
@@ -77,12 +77,15 @@ def get_note_list():
 @writenote_required()
 def update_note():
     sender_id = get_jwt_identity()
-    data = request.json() or {}
+    data = request.get_json() or {}
 
     if "id" not in data:
         return bad_request("You need to identify the note.")
     
-    note = db.session.get(Note, id)
+    if "note" not in data and "private" not in data:
+        return bad_request("must include")
+    
+    note = db.session.get(Note, data["id"])
     if note is None:
         return bad_request("Note not found.")
 
@@ -119,5 +122,5 @@ def delete_note():
     response = {}
     db.session.delete(note)
     db.session.commit()
-    response["message"] = "Wire deleted"
+    response["message"] = "Note deleted"
     return response
