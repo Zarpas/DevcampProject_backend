@@ -313,6 +313,9 @@ class CodeList(PaginatedAPIMixin, db.Model):
     wirelist_owner = db.relationship(
         "WireList", foreign_keys="WireList.owner_id", backref="owner", lazy="dynamic"
     )
+    picture_owner = db.relationship(
+        "Picture", foreign_keys="Picture.reference_id", backref="reference", lazy="dynamic"
+    )
 
     def __repr__(self):
         return "<List {}>".format(self.id)
@@ -508,6 +511,7 @@ class Picture(PaginatedAPIMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     picture = db.Column(db.String(255), nullable=False)
     sender_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    reference_id = db.Column(db.Integer, db.ForeignKey("codelist.id"))
     sended = db.Column(db.DateTime, default=datetime.utcnow)
     description = db.Column(db.String(140), nullable=False)
 
@@ -545,7 +549,24 @@ class Note(PaginatedAPIMixin, db.Model):
         return "<Note {}>".format(self.id)
 
     def to_dict(self):
-        pass
+        data = {
+            "id": self.id,
+            "note": self.note,
+            "private": self.private,
+            "_links": {
+                "self": url_for("note_manager.get_note", id=self.id),
+                "sender": url_for("auth_manager.get_user", id=self.sender_id),
+                "reference": url_for("writelist_manager.get_wire", id=self.reference_id)
+            }
+        }
+        return data
 
-    def from_dict(self, data):
-        pass
+    def from_dict(self, data, new_note=False):
+        if new_note is False:
+            for field in ["sender_id", "reference_id"]:
+                if field in data:
+                    setattr(self, field, data[field])
+        for field in ["note", "private"]:
+            if field in data:
+                setattr(self, field, data[field])
+            

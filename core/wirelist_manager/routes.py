@@ -62,7 +62,7 @@ def update_wire():
     if "id" not in data:
         return bad_request("You need to identify the wire.")
 
-    wire = WireList.query.get(data["id"])
+    wire = db.session.get(WireList, data["id"])
 
     wire.from_dict(data)
     db.session.commit()
@@ -80,7 +80,7 @@ def delete_wire():
     else:
         return bad_request("You need to identify the wire.")
     
-    wire = WireList.query.get(id)
+    wire = db.session.get(WireList, id)
 
     if wire is None:
         return bad_request("Wire not found.")
