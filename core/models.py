@@ -4,7 +4,6 @@ import redis
 import rq
 from flask import current_app, url_for
 import json
-from time import time
 
 from core import db
 

@@ -1,7 +1,5 @@
 from flask import Blueprint
 
-from core import errors
-
 
 bp = Blueprint("picture_manager", __name__)
 

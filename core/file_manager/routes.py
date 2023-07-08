@@ -1,5 +1,5 @@
 from core.models import User, File
-from flask import jsonify, request, abort
+from flask import jsonify, request
 import os
 from werkzeug.utils import secure_filename
 from flask_jwt_extended import get_jwt_identity

@@ -1,7 +1,5 @@
 from flask import Blueprint
 
-from core import errors
-
 
 bp = Blueprint("note_manager", __name__)
 

@@ -1,24 +1,10 @@
-from functools import wraps
-
 from flask import jsonify
 from flask import request
 
 from flask_jwt_extended import jwt_required
-from flask_jwt_extended import create_access_token
-from flask_jwt_extended import create_refresh_token
 from flask_jwt_extended import get_jwt_identity
-from flask_jwt_extended import set_access_cookies
-from flask_jwt_extended import verify_jwt_in_request
-from flask_jwt_extended import get_jwt
-from flask_jwt_extended import current_user
 
-import redis
-
-from datetime import datetime
-from datetime import timedelta
-from datetime import timezone
-
-from core import db, jwt
+from core import db
 from core.auth_manager import bp
 from core.models import User
 from core.errors import bad_request
