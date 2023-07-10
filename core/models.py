@@ -22,11 +22,11 @@ class PaginatedAPIMixin(object):
                 "total_items": resources.total,
             },
             "_links": {
-                "self": url_for(endpoint, page=page, per_page=per_page, **kwargs),
-                "next": url_for(endpoint, page=page + 1, per_page=per_page, **kwargs)
+                "self": url_for(endpoint, _external=True, page=page, per_page=per_page, **kwargs),
+                "next": url_for(endpoint, _external=True, page=page + 1, per_page=per_page, **kwargs)
                 if resources.has_next
                 else None,
-                "prev": url_for(endpoint, page=page - 1, per_page=per_page, **kwargs)
+                "prev": url_for(endpoint, _external=True, page=page - 1, per_page=per_page, **kwargs)
                 if resources.has_prev
                 else None,
             },
@@ -127,7 +127,7 @@ class User(PaginatedAPIMixin, db.Model):
             "username": self.username,
             "surnames": self.surnames,
             "last_seen": self.last_seen.isoformat() + "Z",
-            "_links": {"self": url_for("auth_manager.get_user", id=self.id)},
+            "_links": {"self": url_for("auth_manager.get_user", _external=True, id=self.id)},
         }
         if include_email:
             data["email"] = self.email
@@ -183,9 +183,9 @@ class File(PaginatedAPIMixin, db.Model):
             "sended": self.sended.isoformat() + "Z",
             "processed": self.processed,
             "_links": {
-                "self": url_for("file_manager.get_file", id=self.id),
-                "sender_id": url_for("auth_manager.get_user", id=self.sender_id),
-                "delete": url_for("file_manager.delete_file", id=self.id),
+                "self": url_for("file_manager.get_file", _external=True, id=self.id),
+                "sender_id": url_for("auth_manager.get_user", _external=True, id=self.sender_id),
+                "delete": url_for("file_manager.delete_file", _external=True, id=self.id),
             },
         }
 
@@ -229,8 +229,8 @@ class Task(PaginatedAPIMixin, db.Model):
             "description": self.description,
             "complete": self.complete,
             "_links": {
-                "self": url_for("task_manager.get_task", id=self.id),
-                "user": url_for("auth_manager.get_user", id=self.user_id),
+                "self": url_for("task_manager.get_task", _external=True, id=self.id),
+                "user": url_for("auth_manager.get_user", _external=True, id=self.user_id),
             },
         }
         return data
@@ -255,9 +255,9 @@ class Message(PaginatedAPIMixin, db.Model):
             "timestamp": self.timestamp.isoformat() + "Z",
             "readed": self.readed,
             "_links": {
-                "self": url_for("message_manager.get_message", id=self.id),
-                "sender": url_for("auth_manager.get_user", id=self.sender_id),
-                "recipient": url_for("auth_manager.get_user", id=self.recipient_id),
+                "self": url_for("message_manager.get_message", _external=True, id=self.id),
+                "sender": url_for("auth_manager.get_user", _external=True, id=self.sender_id),
+                "recipient": url_for("auth_manager.get_user", _external=True, id=self.recipient_id),
             },
         }
         return data
@@ -294,8 +294,8 @@ class Notification(PaginatedAPIMixin, db.Model):
             "payload_json": self.payload_json,
             "readed": self.readed,
             "_links": {
-                "self": url_for("notification_manager.get_notification", id=self.id),
-                "user": url_for("auth_manager.get_user", id=self.user_id),
+                "self": url_for("notification_manager.get_notification", _external=True, id=self.id),
+                "user": url_for("auth_manager.get_user", _external=True, id=self.user_id),
             },
         }
         return data
@@ -327,7 +327,7 @@ class CodeList(PaginatedAPIMixin, db.Model):
             "edition": self.edition,
             "revision": self.revision,
             "project": self.project,
-            "_links": {"self": url_for("codelist_manager.get_codelist", id=self.id)},
+            "_links": {"self": url_for("codelist_manager.get_codelist", _external=True, id=self.id)},
         }
         return data
 
@@ -446,8 +446,8 @@ class WireList(PaginatedAPIMixin, db.Model):
             "etiqueta": self.etiqueta,
             "etiqueta_pant": self.etiqueta_pant,
             "_links": {
-                "self": url_for("wirelist_manager.get_wire", id=self.id),
-                "owner": url_for("codelist_manager.get_codelist", id=self.owner_id)
+                "self": url_for("wirelist_manager.get_wire", _external=True, id=self.id),
+                "owner": url_for("codelist_manager.get_codelist", _external=True, id=self.owner_id)
                 },
         }
         return data
@@ -526,9 +526,9 @@ class Picture(PaginatedAPIMixin, db.Model):
             "sended": self.sended,
             "private": self.private,
             "_links": {
-                "self": url_for("picture_manager.get_picture", id=self.id),
-                "sender": url_for("auth_manager.get_user", id=self.sender_id),
-                "reference": url_for("codelist_manager.get_codelist", id=self.reference_id)
+                "self": url_for("picture_manager.get_picture", _external=True, id=self.id),
+                "sender": url_for("auth_manager.get_user", _external=True, id=self.sender_id),
+                "reference": url_for("codelist_manager.get_codelist", _external=True, id=self.reference_id)
             },
         }
         return data
@@ -559,9 +559,9 @@ class Note(PaginatedAPIMixin, db.Model):
             "note": self.note,
             "private": self.private,
             "_links": {
-                "self": url_for("note_manager.get_note", id=self.id),
-                "sender": url_for("auth_manager.get_user", id=self.sender_id),
-                "reference": url_for("wirelist_manager.get_wire", id=self.reference_id)
+                "self": url_for("note_manager.get_note", _external=True, id=self.id),
+                "sender": url_for("auth_manager.get_user", _external=True, id=self.sender_id),
+                "reference": url_for("wirelist_manager.get_wire", _external=True, id=self.reference_id)
             }
         }
         return data

@@ -10,6 +10,10 @@ class Config(object):
     TESTING = False
     DB_SERVER = '127.0.0.1'
 
+    SERVER_NAME = 'localhost:5000'
+    APPLICATION_ROOT = '/'
+    PREFERRED_ULR_SCHEME = 'http'
+
     @property
     def SQLALCHEMY_DATABASE_URI(self):
         return f"sqlite:///" + os.path.join(basedir, "database.db")
