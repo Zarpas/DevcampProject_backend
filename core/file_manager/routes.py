@@ -8,7 +8,7 @@ from functools import wraps
 from flask_jwt_extended import verify_jwt_in_request
 from flask_jwt_extended import get_jwt
 
-from core import db
+from core import create_app, db
 import config
 from core.file_manager import bp
 from core.errors import bad_request
@@ -70,7 +70,7 @@ def post_file():
 
     return jsonify(file.to_dict())
 
-
+  
 @bp.route("/files", methods=["GET"])
 @file_upload_required()
 def get_file_list():

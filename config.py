@@ -10,7 +10,7 @@ class Config(object):
     TESTING = False
     DB_SERVER = '127.0.0.1'
 
-    SERVER_NAME = 'localhost:5000'
+    SERVER_NAME = '127.0.0.1:5000'
     APPLICATION_ROOT = '/'
     PREFERRED_ULR_SCHEME = 'http'
 
@@ -44,6 +44,7 @@ class Config(object):
 
     CORS_SUPPORTS_CREDENTIALS = True
     CORS_METHODS = ["GET", "HEAD", "POST", "OPTIONS", "PUT", "PATCH", "DELETE"]
+    CORS_ORIGINS = "*"
 
     # ELASTICSEARCH_URL = os.environ.get("ELASTICSEARCH_URL")
 

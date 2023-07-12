@@ -81,14 +81,17 @@ def register():
 @bp.route("/user", methods=["GET"])
 @admin_required()
 def get_user():
+
     if request.is_json and "id" in request.json:
             id = request.json.get("id", None)
     elif "id" in request.args:
         id = request.args.get("id", None)
     else:
         return bad_request("You need to identify the user.")
+    roles = request.args.get("roles", False, type=bool)
+    email = request.args.get("email", False, type=bool)
 
-    return jsonify(User.query.get_or_404(id).to_dict())
+    return jsonify(User.query.get_or_404(id).to_dict(include_email=email, include_roles=roles))
 
 
 @bp.route("/user", methods=["PATCH"])
