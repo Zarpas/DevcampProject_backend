@@ -136,6 +136,8 @@ def test_get_codelist(auth):
     print(response.json)
     assert response.status_code == 200
 
+# need to add test_edit_codelist
+
 
 def test_delete_codelist(auth):
     api_url = '/api/codelist/v1.0/codelist'

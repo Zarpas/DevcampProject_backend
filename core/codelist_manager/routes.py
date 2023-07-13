@@ -12,7 +12,6 @@ from core.models import CodeList
 from core.codelist_manager import bp
 
 
-# need to add the listoperate wrapper
 def listoperate_required():
     def wrapper(fn):
         @wraps(fn)
@@ -25,6 +24,7 @@ def listoperate_required():
                 return jsonify(message="List Operators Only!"), 403
         return decorator
     return wrapper
+
 
 @bp.route('/codelist', methods=['POST'])
 @listoperate_required()
@@ -41,6 +41,22 @@ def new_codelist():
     codelist = CodeList()
     codelist.from_dict(data)
     db.session.add(codelist)
+    db.session.commit()
+
+    response = jsonify(codelist.to_dict())
+    response.status_code = 201
+    return response
+
+
+@bp.route('/codelist', methods=['PATCH'])
+@listoperate_required()
+def edit_codelist():
+    data = request.get_json() or {}
+    if "id" not in data:
+        return bad_request("Must include id, list_code, description, edition, revision and project.")
+    
+    codelist = db.session.get(CodeList, id)
+    codelist.from_dict(data)
     db.session.commit()
 
     response = jsonify(codelist.to_dict())
@@ -66,7 +82,6 @@ def get_codelist_list():
     per_page = request.args.get("per_page", 10, type=int)
     data = CodeList.to_collection_dict(CodeList.query, page, per_page, "codelist_manager.get_codelist_list")
     return jsonify(data)
-
 
 
 @bp.route('/codelist', methods=['DELETE'])

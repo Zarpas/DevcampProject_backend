@@ -44,7 +44,6 @@ def test_login(client, auth):
     assert response.json["status"] == 'created'
     
 
-
 @pytest.mark.parametrize(('id', 'password', 'message'), (
     ('3', 'test', "Wrong username or password"),
     ('1', 'a', "Wrong username or password"),
